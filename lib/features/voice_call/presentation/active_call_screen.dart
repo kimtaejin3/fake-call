@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/services/voice_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/glow_orb.dart';
+import '../../../shared/widgets/soft_orb.dart';
 import '../../../shared/widgets/wave_line.dart';
 import '../../fake_call/application/call_setup_provider.dart';
 import '../../history/application/call_history_provider.dart';
@@ -164,10 +164,11 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
                       ),
                     ),
                   ),
-                  GlowOrb(
+                  SoftOrb(
                     size: 200,
                     animate: true,
-                    intensity: aiSpeaking ? 1.2 : 1.0,
+                    speaking: aiSpeaking,
+                    showFace: true,
                   ),
                 ],
               ),
@@ -223,9 +224,9 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
                 color: AppColors.danger,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.danger.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    spreadRadius: 1,
+                    color: AppColors.danger.withValues(alpha: 0.22),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),

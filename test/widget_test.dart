@@ -14,6 +14,6 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: AiFakeCallApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('전화 받기'), findsOneWidget);
+    expect(find.text('30초 후'), findsOneWidget);
   });
 }

@@ -8,7 +8,7 @@ import '../../../core/router/routes.dart';
 import '../../../core/services/ringtone_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/caller.dart';
-import '../../../shared/widgets/glow_orb.dart';
+import '../../../shared/widgets/soft_orb.dart';
 import '../application/call_setup_provider.dart';
 
 /// Full-screen incoming call flow: an optional "delay" countdown stage
@@ -131,7 +131,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
         const Spacer(flex: 3),
         const _GlowBackdrop(
           glowSize: 260,
-          child: GlowOrb(size: 120, animate: true, intensity: 0.7),
+          child: SoftOrb(size: 120, animate: true, showFace: true),
         ),
         const SizedBox(height: 28),
         Text(
@@ -192,7 +192,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
         const Spacer(flex: 3),
         const _GlowBackdrop(
           glowSize: 380,
-          child: GlowOrb(size: 190, animate: true),
+          child: SoftOrb(size: 190, animate: true, showFace: true),
         ),
         const Spacer(flex: 4),
         Padding(
@@ -202,6 +202,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
             children: [
               _CallActionButton(
                 color: AppColors.danger,
+                glowColor: AppColors.danger,
                 icon: Icons.call_end,
                 onTap: _reject,
               ),
@@ -286,9 +287,9 @@ class _CallActionButton extends StatelessWidget {
         boxShadow: glowColor != null
             ? [
                 BoxShadow(
-                  color: glowColor!.withValues(alpha: 0.45),
+                  color: glowColor!.withValues(alpha: 0.22),
                   blurRadius: 24,
-                  spreadRadius: 2,
+                  offset: const Offset(0, 8),
                 ),
               ]
             : null,

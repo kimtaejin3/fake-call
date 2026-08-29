@@ -20,17 +20,20 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: AiFakeCallApp()));
     await tester.pumpAndSettle();
 
-    // 홈 탭: 기본 선택(엄마 / 집에 들어오라고 해줘 / 30초 후)이 미리 채워져 있어
-    // 바로 '전화 받기'를 누를 수 있다.
-    expect(find.text('전화 받기'), findsOneWidget);
+    // 홈 탭: 기본 선택(엄마가 불러요 프리셋 / 30초 후)이 미리 채워져 있어
+    // 시간 pill이 "30초 후"로 표시된다.
+    expect(find.text('30초 후'), findsOneWidget);
 
-    // 기본 delay(30초)는 대기 카운트다운을 유발하므로, 테스트에서는 '지금' 칩을
-    // 먼저 선택해 즉시 수신되도록 한다.
+    // 기본 delay(30초)는 대기 카운트다운을 유발하므로, 테스트에서는 시간 pill을
+    // 눌러 바텀시트에서 '지금'을 먼저 선택해 즉시 수신되도록 한다.
+    await tester.tap(find.text('30초 후'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('지금'));
     await tester.pumpAndSettle();
 
-    // '전화 받기' → 수신 화면 (pulse 애니메이션이 반복되므로 pumpAndSettle 금지)
-    await tester.tap(find.text('전화 받기'));
+    // 통화 버튼(Icons.call) → 수신 화면 (pulse 애니메이션이 반복되므로
+    // pumpAndSettle 금지). 이 시점에는 화면 전환 전이라 Icons.call이 유일하다.
+    await tester.tap(find.byIcon(Icons.call));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(seconds: 1));
     expect(find.text('엄마'), findsOneWidget);
@@ -60,7 +63,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // 홈 탭으로 복귀 + 하단 네비게이션(NavigationBar 또는 BottomNavigationBar) 확인
-    expect(find.text('전화 받기'), findsOneWidget);
+    // (call_complete_screen에서 callSetupProvider가 reset되므로 홈의
+    // postFrameCallback이 다시 기본값을 채워 시간 pill이 "30초 후"로 보인다)
+    expect(find.text('30초 후'), findsOneWidget);
     final hasNavigationBar = find.byType(NavigationBar).evaluate().isNotEmpty;
     final hasBottomNavigationBar =
         find.byType(BottomNavigationBar).evaluate().isNotEmpty;

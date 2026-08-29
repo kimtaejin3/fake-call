@@ -94,9 +94,9 @@ class _WaveLinePainter extends CustomPainter {
       Offset(size.width, 0),
       [
         AppColors.glow.withValues(alpha: 0.0),
-        AppColors.glow.withValues(alpha: 0.85),
-        AppColors.accent.withValues(alpha: 0.9),
-        AppColors.accentAlt.withValues(alpha: 0.85),
+        AppColors.glow.withValues(alpha: 0.4),
+        AppColors.accent.withValues(alpha: 0.45),
+        AppColors.accentAlt.withValues(alpha: 0.4),
         AppColors.accentAlt.withValues(alpha: 0.0),
       ],
       const [0.0, 0.15, 0.5, 0.85, 1.0],

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/glow_orb.dart';
+import '../../../shared/widgets/soft_orb.dart';
 import '../../fake_call/application/call_setup_provider.dart';
 import '../../history/application/call_history_provider.dart';
 
@@ -68,7 +68,7 @@ class _CallCompleteScreenState extends ConsumerState<CallCompleteScreen> {
                     children: [
               const SizedBox(height: 24),
               const Center(
-                child: GlowOrb(size: 100, animate: false, intensity: 0.8),
+                child: SoftOrb(size: 100, animate: false, showFace: true),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -146,9 +146,9 @@ class _CallCompleteScreenState extends ConsumerState<CallCompleteScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.accent.withValues(alpha: 0.35),
-                        blurRadius: 18,
-                        spreadRadius: 1,
+                        color: AppColors.accent.withValues(alpha: 0.20),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
@@ -213,9 +213,9 @@ class _FeedbackChoiceButton extends StatelessWidget {
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: AppColors.accent.withValues(alpha: 0.25),
-                      blurRadius: 16,
-                      spreadRadius: 0,
+                      color: AppColors.accent.withValues(alpha: 0.12),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
                     ),
                   ]
                 : null,

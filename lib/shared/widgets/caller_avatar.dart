@@ -35,14 +35,14 @@ class CallerAvatar extends StatelessWidget {
         gradient: RadialGradient(
           colors: [
             for (final color in AppColors.accentGradient)
-              color.withValues(alpha: 0.25),
+              color.withValues(alpha: 0.20),
           ],
         ),
       ),
       child: Text(
         initial,
         style: TextStyle(
-          color: AppColors.textPrimary,
+          color: AppColors.accent,
           fontSize: size * 0.42,
           fontWeight: FontWeight.w700,
           height: 1,

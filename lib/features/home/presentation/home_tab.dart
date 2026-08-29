@@ -7,15 +7,14 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/app_data.dart';
 import '../../../shared/models/caller.dart';
 import '../../../shared/models/scenario.dart';
-import '../../../shared/widgets/caller_avatar.dart';
-import '../../../shared/widgets/glow_orb.dart';
+import '../../../shared/widgets/soft_orb.dart';
 import '../../fake_call/application/call_setup_provider.dart';
 
 /// Home tab — the app's main screen (lives inside the bottom-nav shell).
 ///
-/// Replaces the old caller/scenario/delay funnel: every choice is made on
-/// one scrollable screen, with sensible defaults pre-selected so a single
-/// tap on the CTA is enough to start a call (see docs/HOME_V2.md).
+/// Simple, single-screen "레퍼런스" layout (see docs/DESIGN_V3.md, "홈 탭 —
+/// 심플 구성"): greeting → big SoftOrb mascot → 2x2 quick-scenario chips →
+/// bottom pill bar (delay picker + call button).
 class HomeTab extends ConsumerStatefulWidget {
   const HomeTab({super.key});
 
@@ -27,24 +26,19 @@ class _HomeTabState extends ConsumerState<HomeTab> {
   @override
   void initState() {
     super.initState();
-    // Pre-select sensible defaults (엄마 / 집에 들어오라고 해줘 / 30초 후) so the
-    // screen is usable with a single tap, without clobbering anything the
-    // user already picked (e.g. returning to this tab after a call).
+    // Pre-select sensible defaults (엄마가 불러요 프리셋 + 30초 후) so the call
+    // button works with a single tap, without clobbering anything the user
+    // already picked (e.g. returning to this tab after a call).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final notifier = ref.read(callSetupProvider.notifier);
       final setup = ref.read(callSetupProvider);
+      final defaultPreset = _presets.first;
       if (setup.caller == null) {
-        final defaultCaller =
-            kCallers.where((c) => c.id == 'mom').firstOrNull ??
-                kCallers.first;
-        notifier.selectCaller(defaultCaller);
+        notifier.selectCaller(defaultPreset.caller);
       }
       if (setup.scenario == null) {
-        final defaultScenario =
-            kScenarios.where((s) => s.id == 'come_home').firstOrNull ??
-                kScenarios.first;
-        notifier.selectScenario(defaultScenario);
+        notifier.selectScenario(defaultPreset.scenario);
       }
       if (setup.delay == null) {
         final defaultDelay =
@@ -63,200 +57,335 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       color: AppColors.background,
       child: Stack(
         children: [
-          // Subtle top radial glow vignette behind the hero orb.
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, -0.9),
-                    radius: 0.9,
-                    colors: [
-                      AppColors.accent.withValues(alpha: 0.14),
-                      AppColors.accent.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+          const Positioned.fill(child: _PastelBlurBackground()),
           SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                    children: [
-                      const SizedBox(height: 8),
-                      const Text(
-                        '곤란한 순간,\n자연스럽게 빠져나오세요.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 16,
-                          height: 1.5,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  const Text(
+                    '안녕하세요!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '곤란한 순간, 빠져나올까요?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 24,
+                      height: 1.35,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
                       // animate: false — a continuously-repeating breathing
                       // animation would keep WidgetTester.pumpAndSettle()
                       // from ever settling on this screen.
-                      const Center(child: GlowOrb(size: 130, animate: false)),
-                      const SizedBox(height: 36),
-                      _SectionTitle('누가 전화할까요?'),
-                      const SizedBox(height: 16),
-                      _CallerRow(
-                        selectedId: setup.caller?.id,
-                        onSelect: (caller) => ref
-                            .read(callSetupProvider.notifier)
-                            .selectCaller(caller),
+                      child: const SoftOrb(
+                        size: 210,
+                        animate: false,
+                        showFace: true,
                       ),
-                      const SizedBox(height: 32),
-                      _SectionTitle('왜 전화했나요?'),
-                      const SizedBox(height: 16),
-                      _ScenarioList(
-                        selectedId: setup.scenario?.id,
-                        onSelect: (scenario) => ref
-                            .read(callSetupProvider.notifier)
-                            .selectScenario(scenario),
-                      ),
-                      const SizedBox(height: 32),
-                      _SectionTitle('언제 전화할까요?'),
-                      const SizedBox(height: 16),
-                      _DelayRow(
-                        selectedSeconds: setup.delay?.seconds,
-                        onSelect: (delay) => ref
-                            .read(callSetupProvider.notifier)
-                            .selectDelay(delay),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                  child: _GradientCtaButton(
-                    label: '전화 받기',
-                    onPressed: setup.isComplete
-                        ? () => context.go(Routes.incomingCall)
-                        : null,
+                  _PresetGrid(
+                    selectedCallerId: setup.caller?.id,
+                    selectedScenarioId: setup.scenario?.id,
+                    onSelect: (preset) {
+                      final notifier = ref.read(callSetupProvider.notifier);
+                      notifier.selectCaller(preset.caller);
+                      notifier.selectScenario(preset.scenario);
+                    },
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  _BottomPillBar(
+                    delayLabel: setup.delay?.label ?? kDelayOptions
+                        .firstWhere((d) => d.seconds == 30)
+                        .label,
+                    onTapDelay: () => _showDelaySheet(context, ref),
+                    onTapCall: () => context.go(Routes.incomingCall),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
+  void _showDelaySheet(BuildContext context, WidgetRef ref) {
+    final currentSeconds = ref.read(callSetupProvider).delay?.seconds;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '언제 전화할까요?',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                for (final option in kDelayOptions)
+                  ListTile(
+                    onTap: () {
+                      ref
+                          .read(callSetupProvider.notifier)
+                          .selectDelay(option);
+                      Navigator.of(sheetContext).pop();
+                    },
+                    title: Text(
+                      option.label,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: option.seconds == currentSeconds
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    trailing: option.seconds == currentSeconds
+                        ? const Icon(Icons.check, color: AppColors.accent)
+                        : null,
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.label);
+/// Two or three softly-blurred pastel circles pinned to the corners of the
+/// screen, per DESIGN_V3's "몽글몽글한" background treatment.
+class _PastelBlurBackground extends StatelessWidget {
+  const _PastelBlurBackground();
 
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          Positioned(
+            top: -80,
+            left: -60,
+            child: _blurCircle(320, AppColors.accent, 0.22),
+          ),
+          Positioned(
+            top: -40,
+            right: -100,
+            child: _blurCircle(260, AppColors.accentAlt, 0.18),
+          ),
+          Positioned(
+            bottom: -100,
+            left: -80,
+            child: _blurCircle(280, AppColors.glow, 0.16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _blurCircle(double size, Color color, double alpha) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            color.withValues(alpha: alpha),
+            color.withValues(alpha: 0),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A quick-start caller+scenario combo, shown as one chip in the 2x2 grid.
+class _Preset {
   final String label;
+  final IconData icon;
+  final String callerId;
+  final String scenarioId;
+
+  const _Preset({
+    required this.label,
+    required this.icon,
+    required this.callerId,
+    required this.scenarioId,
+  });
+
+  Caller get caller => kCallers.firstWhere((c) => c.id == callerId);
+  Scenario get scenario => kScenarios.firstWhere((s) => s.id == scenarioId);
+}
+
+const _presets = [
+  _Preset(
+    label: '엄마가 불러요',
+    icon: Icons.family_restroom,
+    callerId: 'mom',
+    scenarioId: 'come_home',
+  ),
+  _Preset(
+    label: '회사에 일이',
+    icon: Icons.work,
+    callerId: 'boss',
+    scenarioId: 'work_problem',
+  ),
+  _Preset(
+    label: '급한 일이',
+    icon: Icons.priority_high,
+    callerId: 'friend',
+    scenarioId: 'urgent',
+  ),
+  _Preset(
+    label: '그냥 통화',
+    icon: Icons.favorite,
+    callerId: 'partner',
+    scenarioId: 'casual',
+  ),
+];
+
+class _PresetGrid extends StatelessWidget {
+  const _PresetGrid({
+    required this.selectedCallerId,
+    required this.selectedScenarioId,
+    required this.onSelect,
+  });
+
+  final String? selectedCallerId;
+  final String? selectedScenarioId;
+  final ValueChanged<_Preset> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
-        fontSize: 19,
-        fontWeight: FontWeight.w700,
-      ),
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: _buildChip(_presets[0])),
+            const SizedBox(width: 14),
+            Expanded(child: _buildChip(_presets[1])),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(child: _buildChip(_presets[2])),
+            const SizedBox(width: 14),
+            Expanded(child: _buildChip(_presets[3])),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChip(_Preset preset) {
+    final selected = preset.callerId == selectedCallerId &&
+        preset.scenarioId == selectedScenarioId;
+    return _PresetChip(
+      preset: preset,
+      selected: selected,
+      onTap: () => onSelect(preset),
     );
   }
 }
 
-/// Section 1 — horizontally scrolling caller avatars.
-class _CallerRow extends StatelessWidget {
-  const _CallerRow({required this.selectedId, required this.onSelect});
-
-  final String? selectedId;
-  final ValueChanged<Caller> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 96,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: kCallers.length,
-        itemBuilder: (context, index) {
-          final caller = kCallers[index];
-          final selected = caller.id == selectedId;
-          return Padding(
-            padding: EdgeInsets.only(
-              right: index == kCallers.length - 1 ? 0 : 14,
-            ),
-            child: _CallerChip(
-              caller: caller,
-              selected: selected,
-              onTap: () => onSelect(caller),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _CallerChip extends StatelessWidget {
-  const _CallerChip({
-    required this.caller,
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({
+    required this.preset,
     required this.selected,
     required this.onTap,
   });
 
-  final Caller caller;
+  final _Preset preset;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: selected
+          ? AppColors.accent.withValues(alpha: 0.1)
+          : AppColors.surface,
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
-        child: SizedBox(
-          width: 72,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? AppColors.accent : AppColors.surfaceBorder,
+              width: selected ? 1.5 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.accent.withValues(alpha: 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color:
-                        selected ? AppColors.accent : Colors.transparent,
-                    width: 2,
-                  ),
-                  boxShadow: selected
-                      ? [
-                          BoxShadow(
-                            color: AppColors.accent.withValues(alpha: 0.45),
-                            blurRadius: 16,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: CallerAvatar(name: caller.name, size: 56),
+              Icon(
+                preset.icon,
+                color: selected ? AppColors.accent : AppColors.textSecondary,
+                size: 26,
               ),
               const SizedBox(height: 8),
               Text(
-                caller.name,
+                preset.label,
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color:
-                      selected ? AppColors.textPrimary : AppColors.textSecondary,
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                 ),
               ),
             ],
@@ -267,240 +396,98 @@ class _CallerChip extends StatelessWidget {
   }
 }
 
-/// Section 2 — compact vertical scenario cards.
-class _ScenarioList extends StatelessWidget {
-  const _ScenarioList({required this.selectedId, required this.onSelect});
-
-  final String? selectedId;
-  final ValueChanged<Scenario> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (var i = 0; i < kScenarios.length; i++)
-          Padding(
-            padding: EdgeInsets.only(
-              bottom: i == kScenarios.length - 1 ? 0 : 10,
-            ),
-            child: _ScenarioCard(
-              scenario: kScenarios[i],
-              selected: kScenarios[i].id == selectedId,
-              onTap: () => onSelect(kScenarios[i]),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _ScenarioCard extends StatelessWidget {
-  const _ScenarioCard({
-    required this.scenario,
-    required this.selected,
-    required this.onTap,
+/// Bottom pill bar: delay-picker text on the left, circular gradient call
+/// button on the right — mirrors the reference design's input-bar position.
+class _BottomPillBar extends StatelessWidget {
+  const _BottomPillBar({
+    required this.delayLabel,
+    required this.onTapDelay,
+    required this.onTapCall,
   });
 
-  final Scenario scenario;
-  final bool selected;
-  final VoidCallback onTap;
+  final String delayLabel;
+  final VoidCallback onTapDelay;
+  final VoidCallback onTapCall;
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 68,
+      padding: const EdgeInsets.only(left: 20, right: 6),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: selected ? AppColors.accent : AppColors.surfaceBorder,
-          width: selected ? 1.5 : 1,
-        ),
-        boxShadow: selected
-            ? [
-                BoxShadow(
-                  color: AppColors.accent.withValues(alpha: 0.2),
-                  blurRadius: 14,
-                  spreadRadius: 0,
-                ),
-              ]
-            : null,
+        borderRadius: BorderRadius.circular(34),
+        border: Border.all(color: AppColors.surfaceBorder),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accent.withValues(alpha: 0.1),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    scenario.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: selected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
-                      fontSize: 15,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                      height: 1.25,
+      child: Row(
+        children: [
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: onTapDelay,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.schedule,
+                      color: AppColors.textSecondary,
+                      size: 20,
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Text(
+                      delayLabel,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Icon(
-                  selected ? Icons.check_circle : Icons.circle_outlined,
-                  color:
-                      selected ? AppColors.accent : AppColors.textSecondary,
-                  size: 20,
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          _CallButton(onTap: onTapCall),
+        ],
       ),
     );
   }
 }
 
-/// Section 3 — horizontally scrolling delay chips.
-class _DelayRow extends StatelessWidget {
-  const _DelayRow({required this.selectedSeconds, required this.onSelect});
+class _CallButton extends StatelessWidget {
+  const _CallButton({required this.onTap});
 
-  final int? selectedSeconds;
-  final ValueChanged<DelayOption> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: kDelayOptions.length,
-        itemBuilder: (context, index) {
-          final delay = kDelayOptions[index];
-          final selected = delay.seconds == selectedSeconds;
-          return Padding(
-            padding: EdgeInsets.only(
-              right: index == kDelayOptions.length - 1 ? 0 : 10,
-            ),
-            child: _DelayChip(
-              delay: delay,
-              selected: selected,
-              onTap: () => onSelect(delay),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _DelayChip extends StatelessWidget {
-  const _DelayChip({
-    required this.delay,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final DelayOption delay;
-  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? Colors.transparent : AppColors.surface,
-      borderRadius: BorderRadius.circular(22),
+      color: Colors.transparent,
+      shape: const CircleBorder(),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        customBorder: const CircleBorder(),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: selected
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: AppColors.accentGradient,
-                  )
-                : null,
-            border: Border.all(
-              color: selected ? Colors.transparent : AppColors.surfaceBorder,
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: AppColors.accentGradient,
             ),
           ),
-          alignment: Alignment.center,
-          child: Text(
-            delay.label,
-            style: TextStyle(
-              color: selected ? AppColors.background : AppColors.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Accent-gradient filled pill CTA, matching the Voice AI design spec.
-class _GradientCtaButton extends StatelessWidget {
-  const _GradientCtaButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null;
-    return Container(
-      width: double.infinity,
-      height: 58,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: enabled
-              ? AppColors.accentGradient
-              : AppColors.accentGradient
-                  .map((c) => c.withValues(alpha: 0.35))
-                  .toList(),
-        ),
-        boxShadow: enabled
-            ? [
-                BoxShadow(
-                  color: AppColors.accent.withValues(alpha: 0.35),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-              ]
-            : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onPressed,
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: AppColors.textPrimary.withValues(
-                  alpha: enabled ? 1 : 0.6,
-                ),
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
+          child: const Icon(Icons.call, color: Colors.white, size: 24),
         ),
       ),
     );

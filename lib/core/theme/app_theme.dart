@@ -2,40 +2,43 @@ import 'package:flutter/material.dart';
 
 /// Design tokens for AI Fake Call.
 ///
-/// Voice-AI style: deep navy/black background with a glowing blue wave
-/// orb, soft glow effects, futuristic/premium AI-assistant feel.
+/// Light pastel style (v3): lavender-white background, white cards, a soft
+/// gradient "orb" mascot, pill-shaped chips. Friendly and gentle — no dark
+/// neon / glow aesthetic.
 abstract class AppColors {
-  static const background = Color(0xFF050812);
-  static const surface = Color(0xFF0E1524);
-  static const surfaceBorder = Color(0x14FFFFFF); // white 8%
-  static const accent = Color(0xFF4D9FFF);
-  static const accentAlt = Color(0xFF818CF8);
-  static const glow = Color(0xFF38BDF8);
-  static const danger = Color(0xFFF43F5E);
-  static const textPrimary = Color(0xFFF2F5FF);
-  static const textSecondary = Color(0xFF7E8AA6);
-  static const divider = Color(0x14FFFFFF);
+  static const background = Color(0xFFF6F4FE);
+  static const surface = Color(0xFFFFFFFF);
+  static const surfaceBorder = Color(0xFFE9E5F8);
+  static const accent = Color(0xFF8B7CF6);
+  static const accentAlt = Color(0xFF7C9BF8);
+  static const glow = Color(0xFFC4B5FD);
+  static const danger = Color(0xFFF87171);
+  static const textPrimary = Color(0xFF3E3A5F);
+  static const textSecondary = Color(0xFF9A94B8);
+  static const divider = Color(0xFFE9E5F8);
 
-  /// Primary gradient used for CTA buttons and the glow orb.
+  /// Primary gradient used for CTA buttons and the soft orb.
   static const List<Color> accentGradient = [glow, accent, accentAlt];
 }
 
-/// Central ThemeData for the app. Dark-only.
+/// Central ThemeData for the app. Light-only (v3 pastel redesign).
 abstract class AppTheme {
-  static ThemeData get dark {
+  static ThemeData get dark => light;
+
+  static ThemeData get light {
     const colorScheme = ColorScheme(
-      brightness: Brightness.dark,
+      brightness: Brightness.light,
       primary: AppColors.accent,
-      onPrimary: AppColors.textPrimary,
+      onPrimary: Colors.white,
       secondary: AppColors.accentAlt,
-      onSecondary: AppColors.textPrimary,
+      onSecondary: Colors.white,
       error: AppColors.danger,
-      onError: AppColors.textPrimary,
+      onError: Colors.white,
       surface: AppColors.surface,
       onSurface: AppColors.textPrimary,
     );
 
-    final baseTextTheme = ThemeData(brightness: Brightness.dark).textTheme;
+    final baseTextTheme = ThemeData(brightness: Brightness.light).textTheme;
     final textTheme = baseTextTheme.apply(
       bodyColor: AppColors.textPrimary,
       displayColor: AppColors.textPrimary,
@@ -44,7 +47,7 @@ abstract class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: Brightness.light,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.background,
       canvasColor: AppColors.background,
@@ -72,11 +75,9 @@ abstract class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.accent,
-          foregroundColor: AppColors.textPrimary,
+          foregroundColor: Colors.white,
           disabledBackgroundColor: AppColors.accent.withValues(alpha: 0.3),
-          disabledForegroundColor: AppColors.textPrimary.withValues(
-            alpha: 0.6,
-          ),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
           minimumSize: const Size.fromHeight(58),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
@@ -91,7 +92,7 @@ abstract class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.textPrimary,
-          side: const BorderSide(color: AppColors.divider),
+          side: const BorderSide(color: AppColors.surfaceBorder),
           minimumSize: const Size.fromHeight(56),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
