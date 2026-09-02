@@ -32,7 +32,7 @@ FEATURE_W, FEATURE_H = 1024, 500   # 피처 그래픽 (정확히 이 크기여�
 SCREENS = [
     ("p_incoming.png", "01-incoming", "가짜 전화를<br>걸어줄 수 있어요"),
     ("p_home.png", "02-home", "이름과 시간만<br>정하면 돼요"),
-    ("p_active.png", "03-active", "받은 뒤 화면도<br>그대로예요"),
+    ("p_active.png", "03-active", "최대한 똑같이<br>통화 화면을 구성했어요"),
 ]
 
 
