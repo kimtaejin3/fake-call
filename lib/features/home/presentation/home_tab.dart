@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
+import '../../../core/storage/preferences.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/app_data.dart';
 import '../../../shared/models/caller.dart';
@@ -27,8 +28,8 @@ class HomeTab extends ConsumerStatefulWidget {
 /// 시나리오 UI 를 없앤 뒤 쓰는 고정 시나리오.
 const _kDefaultScenarioId = 'come_home';
 
-/// 이름 입력칸의 초기값 — 한 번도 안 건드려도 바로 통화할 수 있게 한다.
-const _kDefaultName = '엄마';
+/// 저장된 이름이 없을 때 이름칸에 채워둘 값 — 처음 켜도 바로 통화할 수 있게.
+const _kFallbackName = '엄마';
 
 class _HomeTabState extends ConsumerState<HomeTab> {
   late final TextEditingController _nameController;
@@ -36,7 +37,16 @@ class _HomeTabState extends ConsumerState<HomeTab> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: _kDefaultName)
+    // 마지막에 전화한 상대를 그대로 다시 부르는 경우가 흔하다. 매번
+    // 기본값으로 되돌리면 통화가 끝날 때마다 다시 타이핑해야 한다.
+    final saved = ref.read(sharedPreferencesProvider)?.getString(
+          PrefKeys.lastCallerName,
+        );
+    _nameController = TextEditingController(
+      text: (saved != null && saved.trim().isNotEmpty)
+          ? saved
+          : _kFallbackName,
+    )
       // 이름이 비면 통화 버튼을 잠가야 하므로 변경마다 다시 그린다.
       ..addListener(() => setState(() {}));
 
@@ -83,6 +93,11 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     // 입력 중 키보드가 떠 있으면 수신 화면 위로 남을 수 있어 먼저 내린다.
     FocusScope.of(context).unfocus();
 
+    ref.read(sharedPreferencesProvider)?.setString(
+          PrefKeys.lastCallerName,
+          name,
+        );
+
     final notifier = ref.read(callSetupProvider.notifier);
     notifier.selectCaller(_callerFor(name));
     if (ref.read(callSetupProvider).scenario == null) {
@@ -110,7 +125,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                 children: [
                   const SizedBox(height: 16),
                   const Text(
-                    '곤란한 순간에는,',
+                    '말 꺼내기 어려울 땐,',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.textSecondary,
@@ -120,7 +135,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    '정중하게 빠져나가요',
+                    '먼저 일어나도 괜찮아요',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.textPrimary,
