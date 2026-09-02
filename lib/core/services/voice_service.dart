@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -64,13 +64,41 @@ class _ScriptLine {
 /// if the mic/plugin is unavailable (denied permission, unsupported
 /// platform, no plugin registered under `flutter test`), it simply never
 /// reports speech and the service behaves exactly as before.
+/// AI 음성(TTS) 출력 기본값.
+///
+/// 지금은 꺼져 있다 — 합성 음성이 오히려 "가짜 통화"임을 드러내서, 화면만
+/// 진짜처럼 보이고 소리는 나지 않는 편이 낫다는 판단. 되살리려면 이 값을
+/// true 로 바꾸면 되고, 그러면 TTS 와 마이크 턴테이킹이 함께 돌아온다.
+const bool kAiVoiceEnabled = false;
+
 class MockVoiceService implements VoiceService {
+  MockVoiceService({this.voiceEnabled = kAiVoiceEnabled});
+
+  /// 대사를 소리내어 말할지 여부.
+  ///
+  /// false 면 마이크도 잡지 않는다 — 턴테이킹(바지인/침묵 대기)은 AI 가
+  /// 말할 때만 의미가 있기 때문이다. 덕분에 통화 시작 직후 마이크 권한
+  /// 팝업이 뜨지 않아 연출이 깨지지 않는다.
+  final bool voiceEnabled;
+
   final StreamController<VoiceEvent> _controller =
       StreamController<VoiceEvent>.broadcast();
-  final FlutterTts _tts = FlutterTts();
   final List<Timer> _timers = [];
-  final UserSpeechDetector _speechDetector = UserSpeechDetector();
+
+  /// 음성이 켜져 있을 때만 만들어진다. 꺼져 있으면 TTS 플러그인 채널을
+  /// 아예 건드리지 않는다 — 쓰지 않을 플러그인을 세워둘 이유가 없고,
+  /// 플러그인이 등록되지 않은 환경(`flutter test`)에서 채널 호출을
+  /// await 하면 응답이 오지 않아 그대로 멈춘다.
+  FlutterTts? _tts;
+
+  /// 음성이 켜져 있을 때만 만들어진다. 만들기만 해도 되는 객체지만, 쓰지
+  /// 않을 마이크 스택을 세워둘 이유가 없다.
+  UserSpeechDetector? _speechDetector;
   StreamSubscription<bool>? _speechSub;
+
+  /// 마이크를 잡고 있는지 — 권한 팝업이 뜨는 조건과 같다.
+  @visibleForTesting
+  bool get micInUse => _speechDetector != null;
 
   /// Bumped on every [start]/[stop]/[dispose] so any in-flight async
   /// continuation from a previous run knows to abandon itself instead of
@@ -105,6 +133,15 @@ class MockVoiceService implements VoiceService {
   /// Poll interval used while waiting for the user to fall silent.
   static const _silenceWaitPoll = Duration(milliseconds: 200);
 
+  /// 음성이 꺼져 있을 때 한 글자를 "말하는" 데 잡는 시간.
+  ///
+  /// TTS 가 켜져 있으면 발화가 끝나야 speak() 가 반환되므로 대사 길이가
+  /// 그대로 페이싱이 된다. 음성을 끄면 그 신호가 사라져 통화가 통째로
+  /// 짧아지므로, 한국어 발화 속도(대략 초당 5~6자)로 어림잡아 메운다.
+  static const _silentMsPerChar = 180;
+  static const _silentMinLine = Duration(milliseconds: 1500);
+  static const _silentMaxLine = Duration(seconds: 8);
+
   static const Map<String, List<_ScriptLine>> _scripts = {
     'come_home': [
       _ScriptLine('여보세요? 너 지금 어디야?'),
@@ -138,11 +175,13 @@ class MockVoiceService implements VoiceService {
   /// Applies voice settings once. Safe to call repeatedly (e.g. across
   /// multiple [start] calls reusing the same service instance).
   Future<void> _ensureTtsConfigured() async {
+    if (!voiceEnabled) return;
     if (_ttsConfigured) return;
     _ttsConfigured = true;
 
+    final tts = _tts ??= FlutterTts();
     try {
-      await _tts.setLanguage('ko-KR');
+      await tts.setLanguage('ko-KR');
       // flutter_tts speech-rate scales differ by platform: mobile
       // (Android/iOS) engines use a 0.0-1.0 range where ~0.5 is normal
       // speaking pace, while the web Speech Synthesis API uses a
@@ -150,13 +189,13 @@ class MockVoiceService implements VoiceService {
       // reads as a calmer, more natural phone-call voice on mobile;
       // on web we keep it at the platform's own "normal" (1.0) since
       // web engines already sound reasonably natural at that rate.
-      await _tts.setSpeechRate(kIsWeb ? 1.0 : 0.5);
-      await _tts.setPitch(1.0);
-      await _tts.setVolume(1.0);
+      await tts.setSpeechRate(kIsWeb ? 1.0 : 0.5);
+      await tts.setPitch(1.0);
+      await tts.setVolume(1.0);
       // Resolve speak() only once the utterance has actually finished
       // being spoken, so we can pace the next line off of real speech
       // duration instead of a guessed fixed delay.
-      await _tts.awaitSpeakCompletion(true);
+      await tts.awaitSpeakCompletion(true);
 
       // NOTE (Android "sounds like a real call"): by default TTS plays
       // through the media/speaker audio stream, not the in-call voice
@@ -182,11 +221,15 @@ class MockVoiceService implements VoiceService {
     await _ensureTtsConfigured();
     if (runId != _runId || _controller.isClosed) return;
 
-    // Don't await mic setup — permission prompts can be slow/blocked on
-    // user interaction, and the call must not stall waiting on it. If it
-    // fails or isn't ready yet, turn-taking checks below simply see "not
-    // speaking" until (if ever) it comes online.
-    unawaited(_ensureDetectorReady());
+    // 음성이 꺼져 있으면 턴테이킹할 상대가 없으므로 마이크를 아예 잡지
+    // 않는다 — 권한 팝업도 뜨지 않는다.
+    //
+    // 켜져 있을 때도 mic setup 을 await 하지 않는다: 권한 팝업은 느리거나
+    // 사용자 조작에 막힐 수 있는데 통화가 거기서 멈추면 안 된다. 아직
+    // 준비되지 않았으면 아래 턴테이킹 검사가 "말하고 있지 않음"으로 볼 뿐이다.
+    if (voiceEnabled) {
+      unawaited(_ensureDetectorReady());
+    }
 
     final script = _scripts[scenarioId] ?? _scripts['casual']!;
     unawaited(_playScript(script, runId));
@@ -200,23 +243,30 @@ class MockVoiceService implements VoiceService {
     _detectorReady = true;
 
     try {
-      final ok = await _speechDetector.start();
-      if (!ok) return;
+      final detector = UserSpeechDetector();
+      _speechDetector = detector;
+      final ok = await detector.start();
+      if (!ok) {
+        _speechDetector = null;
+        return;
+      }
 
-      _speechSub = _speechDetector.speakingStream.listen((speaking) {
+      _speechSub = detector.speakingStream.listen((speaking) {
         if (speaking && _aiSpeaking) {
           // Barge-in: the user started talking while the AI was mid-line.
           // Stop the current utterance immediately; the pending
           // `await _tts.speak(...)` in `_playScript` resolves (or throws,
           // which is caught) and the flow moves on to the post-speech
           // pause / silence wait as usual.
-          unawaited(_tts.stop().catchError((_) {}));
+          unawaited(_tts?.stop().catchError((_) {}));
         }
       });
     } catch (_) {
       // No mic permission, unsupported platform, or plugin unavailable
       // (e.g. running under `flutter test`) — proceed without
       // turn-taking, same as the original TTS-only mock behavior.
+      _speechDetector?.dispose();
+      _speechDetector = null;
     }
   }
 
@@ -232,20 +282,25 @@ class MockVoiceService implements VoiceService {
 
       _controller.add(VoiceEvent(message: line.message));
 
-      // Speak the line aloud. With awaitSpeakCompletion(true) this
-      // resolves once the utterance actually finishes playing (or once
-      // barge-in calls `_tts.stop()`), so the pacing below reflects real
-      // speech length rather than a guess.
-      _aiSpeaking = true;
-      _speechDetector.setAiSpeaking(true);
-      try {
-        await _tts.speak(line.message);
-      } catch (_) {
-        // Speech failed/unavailable/interrupted; keep the scripted flow
-        // moving so the subtitle-driven UI still progresses.
-      } finally {
-        _aiSpeaking = false;
-        _speechDetector.setAiSpeaking(false);
+      if (voiceEnabled) {
+        // Speak the line aloud. With awaitSpeakCompletion(true) this
+        // resolves once the utterance actually finishes playing (or once
+        // barge-in calls `_tts.stop()`), so the pacing below reflects real
+        // speech length rather than a guess.
+        _aiSpeaking = true;
+        _speechDetector?.setAiSpeaking(true);
+        try {
+          await _tts?.speak(line.message);
+        } catch (_) {
+          // Speech failed/unavailable/interrupted; keep the scripted flow
+          // moving so the subtitle-driven UI still progresses.
+        } finally {
+          _aiSpeaking = false;
+          _speechDetector?.setAiSpeaking(false);
+        }
+      } else {
+        // 소리는 내지 않지만, 말하는 데 걸렸을 시간만큼은 흘려보낸다.
+        await _cancellableDelay(_silentSpeechDuration(line.message), runId);
       }
       if (!_isCurrent(runId)) return;
 
@@ -264,14 +319,26 @@ class MockVoiceService implements VoiceService {
   /// Uses the same cancellable-delay/[_runId] mechanism as the rest of
   /// the script player so [stop]/[dispose] abandon it cleanly.
   Future<void> _waitForUserSilence(int runId) async {
-    if (!_speechDetector.isSpeaking) return;
+    final detector = _speechDetector;
+    if (detector == null || !detector.isSpeaking) return;
 
     final deadline = DateTime.now().add(_maxUserSpeechWait);
     while (_isCurrent(runId) &&
-        _speechDetector.isSpeaking &&
+        detector.isSpeaking &&
         DateTime.now().isBefore(deadline)) {
       await _cancellableDelay(_silenceWaitPoll, runId);
     }
+  }
+
+  /// 음성이 꺼져 있을 때 한 대사에 배정할 "발화 시간".
+  static Duration _silentSpeechDuration(String text) {
+    final ms = text.length * _silentMsPerChar;
+    return Duration(
+      milliseconds: ms.clamp(
+        _silentMinLine.inMilliseconds,
+        _silentMaxLine.inMilliseconds,
+      ),
+    );
   }
 
   bool _isCurrent(int runId) => runId == _runId && !_controller.isClosed;
@@ -292,13 +359,13 @@ class MockVoiceService implements VoiceService {
     _runId++;
     _cancelTimers();
     _aiSpeaking = false;
-    _speechDetector.setAiSpeaking(false);
     await _speechSub?.cancel();
     _speechSub = null;
     _detectorReady = false;
-    _speechDetector.stop();
+    _speechDetector?.dispose();
+    _speechDetector = null;
     try {
-      await _tts.stop();
+      await _tts?.stop();
     } catch (_) {
       // Ignore — nothing to stop or engine unavailable.
     }
@@ -308,10 +375,11 @@ class MockVoiceService implements VoiceService {
   void dispose() {
     _runId++;
     _cancelTimers();
-    unawaited(_tts.stop().catchError((_) {}));
+    unawaited(_tts?.stop().catchError((_) {}));
     unawaited(_speechSub?.cancel());
     _speechSub = null;
-    _speechDetector.dispose();
+    _speechDetector?.dispose();
+    _speechDetector = null;
     _controller.close();
   }
 
