@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/soft_orb.dart';
 import '../../fake_call/application/call_setup_provider.dart';
 import '../../history/application/call_history_provider.dart';
 
@@ -67,10 +66,6 @@ class _CallCompleteScreenState extends ConsumerState<CallCompleteScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
               const SizedBox(height: 24),
-              const Center(
-                child: SoftOrb(size: 100, showFace: true),
-              ),
-              const SizedBox(height: 16),
               const Text(
                 '통화가 종료되었습니다.',
                 textAlign: TextAlign.center,

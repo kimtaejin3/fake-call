@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/caller_avatar.dart';
-import '../../../shared/widgets/soft_orb.dart';
 import '../application/call_history_provider.dart';
 
 /// 기록 탭 — 완료된 가짜 전화 통화 목록 (최신순, 메모리 보관만).
@@ -57,8 +56,12 @@ class _EmptyHistory extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SoftOrb(size: 96, showFace: true),
-            const SizedBox(height: 20),
+            const Icon(
+              Icons.history,
+              size: 44,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: 14),
             Text(
               '아직 통화 기록이 없어요',
               style: TextStyle(

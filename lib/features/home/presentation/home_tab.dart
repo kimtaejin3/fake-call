@@ -7,13 +7,16 @@ import '../../../core/storage/preferences.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/app_data.dart';
 import '../../../shared/models/caller.dart';
-import '../../../shared/widgets/soft_orb.dart';
 import '../../fake_call/application/call_setup_provider.dart';
 
 /// 홈 탭 — 앱의 메인 화면(하단 네비 셸 안에 들어간다).
 ///
-/// 구성: 인사 → SoftOrb 마스코트 → 발신자 이름 입력(+ 자주 쓰는 이름 칩) →
+/// 구성: 캐치프라이즈 → 발신자 이름 입력(+ 자주 쓰는 이름 칩) →
 /// 하단 pill(지연 선택 + 통화 버튼).
+///
+/// 마스코트는 두지 않는다. 정하는 것이 이름과 시간 둘뿐이라 화면에 채울 게
+/// 많지 않은데, 그 자리를 캐릭터로 메우면 장난 앱처럼 읽힌다. 대신 위아래
+/// 여백을 넉넉히 둬서 입력 묶음이 화면 가운데에 놓이게 한다.
 ///
 /// 시나리오(왜 전화했나요)는 화면에 두지 않는다. AI 음성을 끈 뒤로는 골라도
 /// 눈에 보이는 차이가 없고(통화 길이와 기록 라벨에만 쓰인다), 홈은 "누가
@@ -144,19 +147,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  Expanded(
-                    child: Center(
-                      // FittedBox — 키보드가 올라와 공간이 줄면 넘치는 대신
-                      // 오브가 작아진다.
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: const SoftOrb(
-                          size: 200,
-                          showFace: true,
-                        ),
-                      ),
-                    ),
-                  ),
+                  const Spacer(flex: 5),
                   const Padding(
                     padding: EdgeInsets.only(left: 4, bottom: 10),
                     child: Text(
@@ -181,7 +172,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                       FocusScope.of(context).unfocus();
                     },
                   ),
-                  const SizedBox(height: 18),
+                  const Spacer(flex: 4),
                   _BottomPillBar(
                     delayLabel: setup.delay?.label ??
                         kDelayOptions

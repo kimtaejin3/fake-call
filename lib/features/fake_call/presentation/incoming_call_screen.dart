@@ -12,7 +12,6 @@ import '../../../core/theme/call_theme.dart';
 import '../../../shared/models/caller.dart';
 import '../../../shared/widgets/call_buttons.dart';
 import '../../../shared/widgets/caller_avatar.dart';
-import '../../../shared/widgets/soft_orb.dart';
 import '../../settings/application/settings_provider.dart';
 import '../application/call_setup_provider.dart';
 
@@ -173,18 +172,13 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
 
   Widget _buildWaitingStage() {
     // SizedBox 로 가로를 강제하는 이유: Column 은 세로만 꽉 채우고 가로는
-    // 가장 넓은 자식(여기선 _GlowBackdrop 260px)에 맞춰 줄어든다. 그대로 두면
-    // 폭 260 짜리 덩어리가 화면 왼쪽에 붙어 가운데 정렬이 깨진다.
+    // 가장 넓은 자식에 맞춰 줄어든다. 그대로 두면 좁은 덩어리가 화면
+    // 왼쪽에 붙어 가운데 정렬이 깨진다.
     return SizedBox(
       width: double.infinity,
       child: Column(
         children: [
           const Spacer(flex: 3),
-          const _GlowBackdrop(
-            glowSize: 260,
-            child: SoftOrb(size: 120, animate: true, showFace: true),
-          ),
-          const SizedBox(height: 28),
           Text(
             '$_remainingSeconds',
             style: const TextStyle(
@@ -455,35 +449,3 @@ class _AndroidRingingStage extends StatelessWidget {
   }
 }
 
-/// 대기 단계의 오브 뒤에 깔리는 부드러운 방사형 글로우.
-class _GlowBackdrop extends StatelessWidget {
-  final double glowSize;
-  final Widget child;
-
-  const _GlowBackdrop({required this.glowSize, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        IgnorePointer(
-          child: Container(
-            width: glowSize,
-            height: glowSize,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  AppColors.accent.withValues(alpha: 0.16),
-                  AppColors.accent.withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          ),
-        ),
-        child,
-      ],
-    );
-  }
-}
