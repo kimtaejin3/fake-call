@@ -68,7 +68,7 @@ class _CallCompleteScreenState extends ConsumerState<CallCompleteScreen> {
                     children: [
               const SizedBox(height: 24),
               const Center(
-                child: SoftOrb(size: 100, animate: false, showFace: true),
+                child: SoftOrb(size: 100, showFace: true),
               ),
               const SizedBox(height: 16),
               const Text(

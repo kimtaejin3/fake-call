@@ -4,6 +4,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/settings/application/settings_provider.dart';
+
 /// Plays the incoming-call ringtone on loop and pulses haptic feedback
 /// while a fake call is ringing.
 class RingtoneService {
@@ -13,18 +15,22 @@ class RingtoneService {
   Timer? _hapticTimer;
   bool _isPlaying = false;
 
-  /// Starts looping the ringtone and periodic vibration. Safe to call
-  /// multiple times; a no-op if already playing.
-  Future<void> start() async {
+  /// [mode] 에 따라 벨소리 루프와 주기 진동을 시작한다. 여러 번 불러도
+  /// 안전하며, 이미 울리는 중이면 아무 일도 하지 않는다.
+  Future<void> start({required RingtoneMode mode}) async {
     if (_isPlaying) return;
     _isPlaying = true;
 
-    try {
-      await _player.setReleaseMode(ReleaseMode.loop);
-      await _player.play(AssetSource('audio/ringtone.wav'));
-    } catch (_) {
-      // 오디오 재생이 불가능한 환경(테스트 등)에서도 수신 화면은 동작해야 한다.
+    if (mode.playsSound) {
+      try {
+        await _player.setReleaseMode(ReleaseMode.loop);
+        await _player.play(AssetSource('audio/ringtone.wav'));
+      } catch (_) {
+        // 오디오 재생이 불가능한 환경(테스트 등)에서도 수신 화면은 동작해야 한다.
+      }
     }
+
+    if (!mode.vibrates) return;
 
     HapticFeedback.vibrate();
     _hapticTimer?.cancel();

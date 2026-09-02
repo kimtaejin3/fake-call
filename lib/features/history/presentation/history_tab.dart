@@ -57,7 +57,7 @@ class _EmptyHistory extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SoftOrb(size: 96, animate: false, showFace: true),
+            const SoftOrb(size: 96, showFace: true),
             const SizedBox(height: 20),
             Text(
               '아직 통화 기록이 없어요',

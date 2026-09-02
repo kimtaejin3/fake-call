@@ -6,15 +6,17 @@ import '../../../core/router/routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/app_data.dart';
 import '../../../shared/models/caller.dart';
-import '../../../shared/models/scenario.dart';
 import '../../../shared/widgets/soft_orb.dart';
 import '../../fake_call/application/call_setup_provider.dart';
 
-/// Home tab — the app's main screen (lives inside the bottom-nav shell).
+/// 홈 탭 — 앱의 메인 화면(하단 네비 셸 안에 들어간다).
 ///
-/// Simple, single-screen "레퍼런스" layout (see docs/DESIGN_V3.md, "홈 탭 —
-/// 심플 구성"): greeting → big SoftOrb mascot → 2x2 quick-scenario chips →
-/// bottom pill bar (delay picker + call button).
+/// 구성: 인사 → SoftOrb 마스코트 → 발신자 이름 입력(+ 자주 쓰는 이름 칩) →
+/// 하단 pill(지연 선택 + 통화 버튼).
+///
+/// 시나리오(왜 전화했나요)는 화면에 두지 않는다. AI 음성을 끈 뒤로는 골라도
+/// 눈에 보이는 차이가 없고(통화 길이와 기록 라벨에만 쓰인다), 홈은 "누가
+/// 언제" 두 가지만 정하면 되는 화면으로 두는 편이 빠르다.
 class HomeTab extends ConsumerStatefulWidget {
   const HomeTab({super.key});
 
@@ -22,31 +24,73 @@ class HomeTab extends ConsumerStatefulWidget {
   ConsumerState<HomeTab> createState() => _HomeTabState();
 }
 
+/// 시나리오 UI 를 없앤 뒤 쓰는 고정 시나리오.
+const _kDefaultScenarioId = 'come_home';
+
+/// 이름 입력칸의 초기값 — 한 번도 안 건드려도 바로 통화할 수 있게 한다.
+const _kDefaultName = '엄마';
+
 class _HomeTabState extends ConsumerState<HomeTab> {
+  late final TextEditingController _nameController;
+
   @override
   void initState() {
     super.initState();
-    // Pre-select sensible defaults (엄마가 불러요 프리셋 + 30초 후) so the call
-    // button works with a single tap, without clobbering anything the user
-    // already picked (e.g. returning to this tab after a call).
+    _nameController = TextEditingController(text: _kDefaultName)
+      // 이름이 비면 통화 버튼을 잠가야 하므로 변경마다 다시 그린다.
+      ..addListener(() => setState(() {}));
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final notifier = ref.read(callSetupProvider.notifier);
       final setup = ref.read(callSetupProvider);
-      final defaultPreset = _presets.first;
-      if (setup.caller == null) {
-        notifier.selectCaller(defaultPreset.caller);
-      }
       if (setup.scenario == null) {
-        notifier.selectScenario(defaultPreset.scenario);
+        notifier.selectScenario(
+          kScenarios.firstWhere((s) => s.id == _kDefaultScenarioId),
+        );
       }
       if (setup.delay == null) {
-        final defaultDelay =
-            kDelayOptions.where((d) => d.seconds == 30).firstOrNull ??
-                kDelayOptions.first;
-        notifier.selectDelay(defaultDelay);
+        notifier.selectDelay(
+          kDelayOptions.firstWhere((d) => d.seconds == 30),
+        );
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  String get _name => _nameController.text.trim();
+
+  /// 입력된 이름에 해당하는 발신자.
+  ///
+  /// 미리 들어 있는 이름(엄마/아빠/…)이면 그 연락처를 그대로 써서 번호까지
+  /// 유지하고, 직접 입력한 이름이면 즉석에서 만든다.
+  Caller _callerFor(String name) {
+    for (final caller in kCallers) {
+      if (caller.name == name) return caller;
+    }
+    return Caller.custom(name);
+  }
+
+  void _startCall() {
+    final name = _name;
+    if (name.isEmpty) return;
+
+    // 입력 중 키보드가 떠 있으면 수신 화면 위로 남을 수 있어 먼저 내린다.
+    FocusScope.of(context).unfocus();
+
+    final notifier = ref.read(callSetupProvider.notifier);
+    notifier.selectCaller(_callerFor(name));
+    if (ref.read(callSetupProvider).scenario == null) {
+      notifier.selectScenario(
+        kScenarios.firstWhere((s) => s.id == _kDefaultScenarioId),
+      );
+    }
+    context.go(Routes.incomingCall);
   }
 
   @override
@@ -62,10 +106,11 @@ class _HomeTabState extends ConsumerState<HomeTab> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 16),
                   const Text(
-                    '안녕하세요!',
+                    '곤란한 순간에는,',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.textSecondary,
@@ -75,7 +120,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    '곤란한 순간, 빠져나올까요?',
+                    '정중하게 빠져나가요',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.textPrimary,
@@ -86,32 +131,50 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   ),
                   Expanded(
                     child: Center(
-                      // animate: false — a continuously-repeating breathing
-                      // animation would keep WidgetTester.pumpAndSettle()
-                      // from ever settling on this screen.
-                      child: const SoftOrb(
-                        size: 210,
-                        animate: false,
-                        showFace: true,
+                      // FittedBox — 키보드가 올라와 공간이 줄면 넘치는 대신
+                      // 오브가 작아진다.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: const SoftOrb(
+                          size: 200,
+                          showFace: true,
+                        ),
                       ),
                     ),
                   ),
-                  _PresetGrid(
-                    selectedCallerId: setup.caller?.id,
-                    selectedScenarioId: setup.scenario?.id,
-                    onSelect: (preset) {
-                      final notifier = ref.read(callSetupProvider.notifier);
-                      notifier.selectCaller(preset.caller);
-                      notifier.selectScenario(preset.scenario);
+                  const Padding(
+                    padding: EdgeInsets.only(left: 4, bottom: 10),
+                    child: Text(
+                      '누가 전화할까요?',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  _NameField(controller: _nameController),
+                  const SizedBox(height: 12),
+                  _PresetNameChips(
+                    selectedName: _name,
+                    onSelect: (name) {
+                      _nameController
+                        ..text = name
+                        ..selection = TextSelection.collapsed(
+                          offset: name.length,
+                        );
+                      FocusScope.of(context).unfocus();
                     },
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   _BottomPillBar(
-                    delayLabel: setup.delay?.label ?? kDelayOptions
-                        .firstWhere((d) => d.seconds == 30)
-                        .label,
+                    delayLabel: setup.delay?.label ??
+                        kDelayOptions
+                            .firstWhere((d) => d.seconds == 30)
+                            .label,
+                    canCall: _name.isNotEmpty,
                     onTapDelay: () => _showDelaySheet(context, ref),
-                    onTapCall: () => context.go(Routes.incomingCall),
+                    onTapCall: _startCall,
                   ),
                 ],
               ),
@@ -126,7 +189,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     final currentSeconds = ref.read(callSetupProvider).delay?.seconds;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -164,9 +227,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                 for (final option in kDelayOptions)
                   ListTile(
                     onTap: () {
-                      ref
-                          .read(callSetupProvider.notifier)
-                          .selectDelay(option);
+                      ref.read(callSetupProvider.notifier).selectDelay(option);
                       Navigator.of(sheetContext).pop();
                     },
                     title: Text(
@@ -192,8 +253,103 @@ class _HomeTabState extends ConsumerState<HomeTab> {
   }
 }
 
-/// Two or three softly-blurred pastel circles pinned to the corners of the
-/// screen, per DESIGN_V3's "몽글몽글한" background treatment.
+/// 발신자 이름 입력칸.
+class _NameField extends StatelessWidget {
+  const _NameField({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.surfaceBorder),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accent.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        textInputAction: TextInputAction.done,
+        maxLength: 20,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+        ),
+        decoration: const InputDecoration(
+          hintText: '이름을 입력하세요',
+          hintStyle: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 17,
+            fontWeight: FontWeight.w500,
+          ),
+          counterText: '',
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          prefixIcon: Icon(
+            Icons.person_outline,
+            color: AppColors.textSecondary,
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 자주 쓰는 이름을 한 번에 채워 넣는 칩 줄.
+class _PresetNameChips extends StatelessWidget {
+  const _PresetNameChips({
+    required this.selectedName,
+    required this.onSelect,
+  });
+
+  final String selectedName;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final caller in kCallers)
+          ActionChip(
+            label: Text(caller.name),
+            onPressed: () => onSelect(caller.name),
+            backgroundColor: caller.name == selectedName
+                ? AppColors.accent.withValues(alpha: 0.12)
+                : AppColors.surface,
+            side: BorderSide(
+              color: caller.name == selectedName
+                  ? AppColors.accent
+                  : AppColors.surfaceBorder,
+            ),
+            labelStyle: TextStyle(
+              color: caller.name == selectedName
+                  ? AppColors.textPrimary
+                  : AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: caller.name == selectedName
+                  ? FontWeight.w700
+                  : FontWeight.w600,
+            ),
+            shape: const StadiumBorder(),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          ),
+      ],
+    );
+  }
+}
+
+/// 화면 구석에 깔리는 옅은 파스텔 원들 — DESIGN_V3 의 "몽글몽글한" 배경.
 class _PastelBlurBackground extends StatelessWidget {
   const _PastelBlurBackground();
 
@@ -239,173 +395,17 @@ class _PastelBlurBackground extends StatelessWidget {
   }
 }
 
-/// A quick-start caller+scenario combo, shown as one chip in the 2x2 grid.
-class _Preset {
-  final String label;
-  final IconData icon;
-  final String callerId;
-  final String scenarioId;
-
-  const _Preset({
-    required this.label,
-    required this.icon,
-    required this.callerId,
-    required this.scenarioId,
-  });
-
-  Caller get caller => kCallers.firstWhere((c) => c.id == callerId);
-  Scenario get scenario => kScenarios.firstWhere((s) => s.id == scenarioId);
-}
-
-const _presets = [
-  _Preset(
-    label: '엄마가 불러요',
-    icon: Icons.family_restroom,
-    callerId: 'mom',
-    scenarioId: 'come_home',
-  ),
-  _Preset(
-    label: '회사에 일이',
-    icon: Icons.work,
-    callerId: 'boss',
-    scenarioId: 'work_problem',
-  ),
-  _Preset(
-    label: '급한 일이',
-    icon: Icons.priority_high,
-    callerId: 'friend',
-    scenarioId: 'urgent',
-  ),
-  _Preset(
-    label: '그냥 통화',
-    icon: Icons.favorite,
-    callerId: 'partner',
-    scenarioId: 'casual',
-  ),
-];
-
-class _PresetGrid extends StatelessWidget {
-  const _PresetGrid({
-    required this.selectedCallerId,
-    required this.selectedScenarioId,
-    required this.onSelect,
-  });
-
-  final String? selectedCallerId;
-  final String? selectedScenarioId;
-  final ValueChanged<_Preset> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: _buildChip(_presets[0])),
-            const SizedBox(width: 14),
-            Expanded(child: _buildChip(_presets[1])),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(child: _buildChip(_presets[2])),
-            const SizedBox(width: 14),
-            Expanded(child: _buildChip(_presets[3])),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildChip(_Preset preset) {
-    final selected = preset.callerId == selectedCallerId &&
-        preset.scenarioId == selectedScenarioId;
-    return _PresetChip(
-      preset: preset,
-      selected: selected,
-      onTap: () => onSelect(preset),
-    );
-  }
-}
-
-class _PresetChip extends StatelessWidget {
-  const _PresetChip({
-    required this.preset,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _Preset preset;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected
-          ? AppColors.accent.withValues(alpha: 0.1)
-          : AppColors.surface,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected ? AppColors.accent : AppColors.surfaceBorder,
-              width: selected ? 1.5 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.accent.withValues(alpha: 0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                preset.icon,
-                color: selected ? AppColors.accent : AppColors.textSecondary,
-                size: 26,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                preset.label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: selected
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                  fontSize: 14,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Bottom pill bar: delay-picker text on the left, circular gradient call
-/// button on the right — mirrors the reference design's input-bar position.
+/// 하단 pill 바: 왼쪽 지연 선택, 오른쪽 원형 그라데이션 통화 버튼.
 class _BottomPillBar extends StatelessWidget {
   const _BottomPillBar({
     required this.delayLabel,
+    required this.canCall,
     required this.onTapDelay,
     required this.onTapCall,
   });
 
   final String delayLabel;
+  final bool canCall;
   final VoidCallback onTapDelay;
   final VoidCallback onTapCall;
 
@@ -456,7 +456,7 @@ class _BottomPillBar extends StatelessWidget {
               ),
             ),
           ),
-          _CallButton(onTap: onTapCall),
+          _CallButton(enabled: canCall, onTap: onTapCall),
         ],
       ),
     );
@@ -464,36 +464,36 @@ class _BottomPillBar extends StatelessWidget {
 }
 
 class _CallButton extends StatelessWidget {
-  const _CallButton({required this.onTap});
+  const _CallButton({required this.enabled, required this.onTap});
 
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Container(
-          width: 56,
-          height: 56,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: AppColors.accentGradient,
+    return Opacity(
+      opacity: enabled ? 1 : 0.4,
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: enabled ? onTap : null,
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: AppColors.accentGradient,
+              ),
             ),
+            child: const Icon(Icons.call, color: Colors.white, size: 24),
           ),
-          child: const Icon(Icons.call, color: Colors.white, size: 24),
         ),
       ),
     );
   }
-}
-
-extension<T> on Iterable<T> {
-  T? get firstOrNull => isEmpty ? null : first;
 }
