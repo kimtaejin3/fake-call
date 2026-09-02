@@ -1,3 +1,9 @@
+> **[부분 구버전 — 홈 탭 구성은 대체됨]** 퍼널 제거 + 하단 네비게이션 셸이라는 이 문서의
+> 전체 구조는 여전히 현행입니다. 다만 아래 "홈 탭" 절이 설명하는 화면 구성(CallerAvatar
+> 가로 스크롤 + 시나리오 리스트 + delay 칩)은 `docs/DESIGN_V3.md`의 "홈 탭 — 심플 구성"
+> (인사 + 대형 SoftOrb + 2x2 프리셋 칩 + 하단 pill 바)으로 다시 바뀌었습니다. 현재
+> 구현(`lib/features/home/presentation/home_tab.dart`)은 DESIGN_V3 쪽을 따릅니다.
+
 # 홈 개편 v2 — 앱형 메인 + 하단 네비게이션
 
 ## 목표

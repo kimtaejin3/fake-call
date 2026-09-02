@@ -2,35 +2,24 @@ import 'package:go_router/go_router.dart';
 
 import 'routes.dart';
 import '../../features/shell/presentation/shell_screen.dart';
-import '../../features/caller/presentation/caller_select_screen.dart';
-import '../../features/scenario/presentation/scenario_select_screen.dart';
-import '../../features/fake_call/presentation/delay_select_screen.dart';
 import '../../features/fake_call/presentation/incoming_call_screen.dart';
 import '../../features/voice_call/presentation/active_call_screen.dart';
 import '../../features/feedback/presentation/call_complete_screen.dart';
 
-/// Global app router.
+/// Builds a fresh router.
 ///
 /// Screens take no arguments; all selection state (caller/scenario/delay)
 /// is read from `callSetupProvider` rather than passed via route params.
-final GoRouter appRouter = GoRouter(
+///
+/// The app uses the single [appRouter] instance below, but tests need a new
+/// router per test — a shared one carries its current location from one test
+/// into the next.
+GoRouter createAppRouter() => GoRouter(
   initialLocation: Routes.home,
   routes: [
     GoRoute(
       path: Routes.home,
       builder: (context, state) => const ShellScreen(),
-    ),
-    GoRoute(
-      path: Routes.callerSelect,
-      builder: (context, state) => const CallerSelectScreen(),
-    ),
-    GoRoute(
-      path: Routes.scenarioSelect,
-      builder: (context, state) => const ScenarioSelectScreen(),
-    ),
-    GoRoute(
-      path: Routes.delaySelect,
-      builder: (context, state) => const DelaySelectScreen(),
     ),
     GoRoute(
       path: Routes.incomingCall,
@@ -46,3 +35,6 @@ final GoRouter appRouter = GoRouter(
     ),
   ],
 );
+
+/// Router instance used by the running app.
+final GoRouter appRouter = createAppRouter();
