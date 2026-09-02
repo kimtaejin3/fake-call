@@ -1,20 +1,39 @@
 <!doctype html><html><head><meta charset="utf-8"><style>
   html,body { margin:0; padding:0; width:100vw; height:100vw; overflow:hidden; }
-  body { background: radial-gradient(circle at 50% 34%, #F4F1FE 0%, #E4DDFB 100%);
-         display:flex; align-items:center; justify-content:center; }
-  .orb { width:74vw; height:74vw; position:relative; border-radius:50%;
-    background: radial-gradient(circle at 32% 26%,
-      #CFC3FE 0%, #A896F8 34%, #8B7CF6 62%, #6D5BD0 100%); }
-  .orb::after { content:''; position:absolute; left:12%; right:12%; bottom:-7%;
-    height:9%; border-radius:50%; background:rgba(109,91,208,.22);
-    filter:blur(5vw); z-index:-1; }
-  svg { position:absolute; inset:0; }
+  svg { display:block; width:100vw; height:100vw; }
 </style></head><body>
-  <!-- 앱 안에서는 가끔 윙크하지만, 아이콘은 한 장이라 가장 이 앱다운
-       순간(윙크)을 고정해 둔다. -->
-  <div class="orb"><svg viewBox="0 0 320 320">
-    <rect x="106" y="122" width="35" height="76" rx="17.5" fill="#fff"/>
-    <path d="M172 174 q22 -31 44 0" stroke="#fff" stroke-width="21"
-          stroke-linecap="round" fill="none"/>
-  </svg></div>
-</body></html>
+<!-- 전부 하나의 SVG 로 그린다. CSS 로 배치하면 렌더 크기에 따라 어긋나서,
+     좌표를 viewBox 안에 고정하는 편이 안전하다.
+     앱 안에서는 가끔만 윙크하지만 아이콘은 한 장이라, 가장 이 앱다운
+     순간(윙크하며 전화를 받는 모습)을 고정해 둔다. -->
+<svg viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="34%" r="75%">
+      <stop offset="0" stop-color="#F4F1FE"/><stop offset="1" stop-color="#E4DDFB"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="32%" cy="26%" r="78%">
+      <stop offset="0" stop-color="#CFC3FE"/><stop offset=".34" stop-color="#A896F8"/>
+      <stop offset=".62" stop-color="#8B7CF6"/><stop offset="1" stop-color="#6D5BD0"/>
+    </radialGradient>
+    <filter id="drop" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7"
+                    flood-color="#5B49B8" flood-opacity=".30"/>
+    </filter>
+  </defs>
+
+  <rect width="320" height="320" fill="url(#bg)"/>
+  <circle cx="138" cy="164" r="110" fill="url(#orb)"/>
+
+  <!-- 얼굴은 왼쪽 2/3 안에 둔다. 폰이 눈을 가리면 표정이 뭉개진다. -->
+  <rect x="76" y="130" width="30" height="66" rx="15" fill="#fff"/>
+  <path d="M132 178 q18 -26 36 0" stroke="#fff" stroke-width="17"
+        stroke-linecap="round" fill="none"/>
+
+  <!-- 폰은 귀 위치(오른쪽 가장자리)에. 그림자를 줘야 흰 폰이 밝은
+       배경 위에서도 떠 보인다. -->
+  <g transform="rotate(18 246 160)" filter="url(#drop)">
+    <rect x="214" y="94" width="66" height="136" rx="20" fill="#fff"/>
+    <rect x="226" y="111" width="42" height="102" rx="10"
+          fill="#8B7CF6" opacity=".40"/>
+  </g>
+</svg></body></html>

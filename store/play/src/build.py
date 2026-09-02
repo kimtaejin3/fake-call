@@ -86,7 +86,7 @@ FEATURE_HTML = f"""<!doctype html><html><head><meta charset="utf-8">
               color:#332E52; letter-spacing:-1.4px; word-break:keep-all; }}
   .copy p {{ margin:20px 0 0; font-size:25px; font-weight:500;
              color:#7E77A6; word-break:keep-all; }}
-  .art {{ position:relative; width:250px; display:flex;
+  .art {{ position:relative; width:290px; display:flex;
           align-items:center; justify-content:center; }}
   .orb {{ width:210px; height:210px;
           --eye-w:27px; --eye-h:60px; --eye-gap:31px; --shadow-blur:18px; }}
@@ -99,11 +99,28 @@ FEATURE_HTML = f"""<!doctype html><html><head><meta charset="utf-8">
     <p>정해둔 시간에 걸려오는 전화</p>
   </div>
   <div class="art">
-    <div class="orb"><svg viewBox="0 0 320 320" style="position:absolute;inset:0">
-      <rect x="106" y="122" width="35" height="76" rx="17.5" fill="#fff"/>
-      <path d="M172 174 q22 -31 44 0" stroke="#fff" stroke-width="21"
+    <!-- 아이콘과 같은 그림 — 윙크하며 전화를 받는 모습 -->
+    <svg viewBox="0 0 320 320" style="width:100%">
+      <defs>
+        <radialGradient id="orb" cx="32%" cy="26%" r="78%">
+          <stop offset="0" stop-color="#CFC3FE"/><stop offset=".34" stop-color="#A896F8"/>
+          <stop offset=".62" stop-color="#8B7CF6"/><stop offset="1" stop-color="#6D5BD0"/>
+        </radialGradient>
+        <filter id="drop" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow dx="0" dy="5" stdDeviation="7"
+                        flood-color="#5B49B8" flood-opacity=".28"/>
+        </filter>
+      </defs>
+      <circle cx="138" cy="164" r="110" fill="url(#orb)"/>
+      <rect x="76" y="130" width="30" height="66" rx="15" fill="#fff"/>
+      <path d="M132 178 q18 -26 36 0" stroke="#fff" stroke-width="17"
             stroke-linecap="round" fill="none"/>
-    </svg></div>
+      <g transform="rotate(18 246 160)" filter="url(#drop)">
+        <rect x="214" y="94" width="66" height="136" rx="20" fill="#fff"/>
+        <rect x="226" y="111" width="42" height="102" rx="10"
+              fill="#8B7CF6" opacity=".40"/>
+      </g>
+    </svg>
   </div>
 </div></body></html>"""
 
