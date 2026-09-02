@@ -1,8 +1,10 @@
-@font-face { font-family:'Pretendard'; font-weight:700;
+/* font-display:swap — 기본값은 폰트를 기다리며 글자를 숨긴다(FOIT).
+   헤드리스 캡처가 그 사이에 찍히면 텍스트가 통째로 빈다. */
+@font-face { font-family:'Pretendard'; font-weight:700; font-display:swap;
   src:url('../../../assets/fonts/Pretendard-Bold.otf') format('opentype'); }
-@font-face { font-family:'Pretendard'; font-weight:600;
+@font-face { font-family:'Pretendard'; font-weight:600; font-display:swap;
   src:url('../../../assets/fonts/Pretendard-SemiBold.otf') format('opentype'); }
-@font-face { font-family:'Pretendard'; font-weight:500;
+@font-face { font-family:'Pretendard'; font-weight:500; font-display:swap;
   src:url('../../../assets/fonts/Pretendard-Medium.otf') format('opentype'); }
 
 html,body { margin:0; padding:0; overflow:hidden;

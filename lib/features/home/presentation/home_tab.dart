@@ -125,7 +125,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                 children: [
                   const SizedBox(height: 16),
                   const Text(
-                    '말 꺼내기 어려울 땐,',
+                    '곤란한 자리에선,',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.textSecondary,
@@ -135,7 +135,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    '먼저 일어나도 괜찮아요',
+                    '전화 한 통이면 돼요',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.textPrimary,

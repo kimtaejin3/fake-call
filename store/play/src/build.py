@@ -94,7 +94,7 @@ FEATURE_HTML = f"""<!doctype html><html><head><meta charset="utf-8">
 <div class="blob a"></div><div class="blob b"></div>
 <div class="wrap">
   <div class="copy">
-    <h1>말 꺼내기 어려울 땐,<br>먼저 일어나도 괜찮아요</h1>
+    <h1>곤란한 자리에선,<br>전화 한 통이면 돼요</h1>
     <p>정해둔 시간에 걸려오는 전화</p>
   </div>
   <div class="art">
@@ -113,6 +113,10 @@ def render(html: str, name: str, w: int, h: int) -> Path:
          "--force-device-scale-factor=1",
          # 로컬 폰트/이미지를 file:// 로 읽어야 한다
          "--allow-file-access-from-files",
+         # 가상 시간을 미리 돌려 폰트/이미지 로딩이 끝난 뒤 캡처한다.
+         # 없으면 이미지가 없는 페이지(피처 그래픽)가 폰트보다 먼저 찍혀
+         # 글자가 빈 채로 나온다.
+         "--virtual-time-budget=4000",
          f"--screenshot={out}", f"--window-size={w},{h}",
          f"file://{page}"],
         capture_output=True, check=False,

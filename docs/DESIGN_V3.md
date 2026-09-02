@@ -35,7 +35,7 @@ class SoftOrb extends StatefulWidget {
 
 ## 홈 탭 — 심플 구성 (레퍼런스 구도 그대로)
 위→아래:
-1. 캐치프라이즈: "말 꺼내기 어려울 땐," (작게) / "먼저 일어나도 괜찮아요" (크게, textPrimary, 중앙 정렬)
+1. 캐치프라이즈: "곤란한 자리에선," (작게) / "전화 한 통이면 돼요" (크게, textPrimary, 중앙 정렬)
 2. 중앙 대형 SoftOrb(size 200~220, 얼굴 있음) — 화면의 주인공.
 3. 하단 2x2 빠른 시나리오 칩 (흰 pill 카드 + 아이콘 + 짧은 라벨, 부드러운 그림자):
    - "👩 엄마가 불러요" → caller=mom, scenario=come_home
