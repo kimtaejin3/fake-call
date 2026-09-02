@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""Google Play 스토어 등록용 이미지 자료를 만든다.
+
+원본 스크린샷(raw/*.png, 1080x1920)을 배경·카피와 함께 합성해 스토어
+스크린샷을 만들고, 피처 그래픽도 함께 렌더한다. 렌더러는 headless Chrome
+이라 지정한 픽셀 크기가 그대로 나온다 — Play 는 규격을 엄격히 검사한다.
+
+사용법:  python3 build.py
+"""
+
+import subprocess
+import sys
+from pathlib import Path
+
+SRC = Path(__file__).resolve().parent
+OUT = SRC.parent
+CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+# Play Console 규격
+PHONE_W, PHONE_H = 1080, 1920      # 폰 스크린샷 (9:16)
+FEATURE_W, FEATURE_H = 1024, 500   # 피처 그래픽 (정확히 이 크기여야 함)
+
+# (원본, 출력 파일명, 큰 카피, 작은 카피)
+SCREENS = [
+    ("p_incoming.png", "01-incoming",
+     "진짜 전화와<br>구분되지 않아요",
+     "실제 시스템 전화 화면 그대로"),
+    ("p_home.png", "02-home",
+     "이름과 시간만<br>정하면 끝",
+     "누가, 몇 초 뒤에 — 두 가지면 충분해요"),
+    ("p_active.png", "03-active",
+     "받은 뒤에도<br>자연스럽게",
+     "통화 시간, 음소거, 스피커까지 그대로"),
+    ("p_countdown.png", "04-countdown",
+     "예약한 시간에<br>정확히 울려요",
+     "지금 · 10초 · 30초 · 1분 · 3분"),
+    ("p_ringsheet.png", "05-ringtone",
+     "소리 없이<br>진동만으로",
+     "조용해야 하는 자리를 위해"),
+    ("p_keypad.png", "06-keypad",
+     "키패드까지<br>실제 그대로",
+     "눌러보면 숫자판이 올라와요"),
+]
+
+
+def screenshot_html(raw: str, big: str, small: str) -> str:
+    """스토어 스크린샷 한 장의 HTML."""
+    return f"""<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="_base.css">
+<style>
+  html,body {{ width:{PHONE_W}px; height:{PHONE_H}px; }}
+  .blob.a {{ width:620px; height:620px; top:-190px; left:-170px;
+             background:radial-gradient(circle,rgba(139,124,246,.30),transparent 70%); }}
+  .blob.b {{ width:520px; height:520px; top:-90px; right:-190px;
+             background:radial-gradient(circle,rgba(124,155,248,.26),transparent 70%); }}
+  .blob.c {{ width:560px; height:560px; bottom:-210px; left:-140px;
+             background:radial-gradient(circle,rgba(196,181,253,.28),transparent 70%); }}
+  .wrap {{ position:relative; height:100%;
+           display:flex; flex-direction:column; align-items:center; }}
+  h1 {{ margin:120px 0 0; font-size:76px; line-height:1.24; font-weight:700;
+        color:#332E52; text-align:center; letter-spacing:-1.5px; }}
+  p  {{ margin:26px 0 0; font-size:33px; font-weight:500;
+        color:#7E77A6; text-align:center; }}
+  /* 흰 베젤 + 부드러운 그림자로 기기처럼 보이게 */
+  .device {{ margin-top:64px; width:716px; padding:11px; background:#fff;
+             border-radius:56px; box-shadow:0 30px 70px rgba(74,58,140,.22); }}
+  .device img {{ display:block; width:100%; border-radius:46px; }}
+</style></head><body>
+<div class="bg"></div>
+<div class="blob a"></div><div class="blob b"></div><div class="blob c"></div>
+<div class="wrap">
+  <h1>{big}</h1>
+  <p>{small}</p>
+  <div class="device"><img src="raw/{raw}"></div>
+</div></body></html>"""
+
+
+FEATURE_HTML = f"""<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="_base.css">
+<link rel="stylesheet" href="_orb.css">
+<style>
+  html,body {{ width:{FEATURE_W}px; height:{FEATURE_H}px; }}
+  .blob.a {{ width:420px; height:420px; top:-150px; left:-110px;
+             background:radial-gradient(circle,rgba(139,124,246,.34),transparent 70%); }}
+  .blob.b {{ width:360px; height:360px; bottom:-150px; left:280px;
+             background:radial-gradient(circle,rgba(196,181,253,.30),transparent 70%); }}
+  .wrap {{ position:relative; height:100%; display:flex; align-items:center;
+           /* Play 는 가장자리를 잘라낼 수 있어 여백을 넉넉히 둔다 */
+           padding:0 64px; box-sizing:border-box; gap:36px; }}
+  .copy {{ flex:1; }}
+  /* word-break:keep-all — 한글은 기본 줄바꿈이 단어 중간을 끊어서
+     "괜찮아 / 요" 처럼 갈라진다. 어절 단위로 끊게 강제한다. */
+  .copy h1 {{ margin:0; font-size:50px; line-height:1.26; font-weight:700;
+              color:#332E52; letter-spacing:-1.4px; word-break:keep-all; }}
+  .copy p {{ margin:20px 0 0; font-size:25px; font-weight:500;
+             color:#7E77A6; word-break:keep-all; }}
+  .art {{ position:relative; width:250px; display:flex;
+          align-items:center; justify-content:center; }}
+  .orb {{ width:210px; height:210px;
+          --eye-w:27px; --eye-h:60px; --eye-gap:31px; --shadow-blur:18px; }}
+</style></head><body>
+<div class="bg"></div>
+<div class="blob a"></div><div class="blob b"></div>
+<div class="wrap">
+  <div class="copy">
+    <h1>말 꺼내기 어려울 땐,<br>먼저 일어나도 괜찮아요</h1>
+    <p>정해둔 시간에 걸려오는, 진짜 같은 전화 한 통</p>
+  </div>
+  <div class="art">
+    <div class="orb"><div class="eyes"><div class="eye"></div><div class="eye"></div></div></div>
+  </div>
+</div></body></html>"""
+
+
+def render(html: str, name: str, w: int, h: int) -> Path:
+    """HTML 을 정확히 w×h 픽셀 PNG 로 렌더한다."""
+    page = SRC / f"_{name}.html"
+    page.write_text(html, encoding="utf-8")
+    out = OUT / f"{name}.png"
+    subprocess.run(
+        [CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
+         "--force-device-scale-factor=1",
+         # 로컬 폰트/이미지를 file:// 로 읽어야 한다
+         "--allow-file-access-from-files",
+         f"--screenshot={out}", f"--window-size={w},{h}",
+         f"file://{page}"],
+        capture_output=True, check=False,
+    )
+    if not out.exists():
+        sys.exit(f"렌더 실패: {name}")
+    return out
+
+
+def main() -> None:
+    made = []
+    for raw, name, big, small in SCREENS:
+        if not (SRC / "raw" / raw).exists():
+            print(f"  건너뜀 (원본 없음): {raw}")
+            continue
+        made.append(render(screenshot_html(raw, big, small),
+                           name, PHONE_W, PHONE_H))
+    made.append(render(FEATURE_HTML, "feature-graphic", FEATURE_W, FEATURE_H))
+
+    for f in made:
+        print(f"  {f.name}")
+
+
+if __name__ == "__main__":
+    main()

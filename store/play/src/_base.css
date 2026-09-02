@@ -1,0 +1,14 @@
+@font-face { font-family:'Pretendard'; font-weight:700;
+  src:url('../../../assets/fonts/Pretendard-Bold.otf') format('opentype'); }
+@font-face { font-family:'Pretendard'; font-weight:600;
+  src:url('../../../assets/fonts/Pretendard-SemiBold.otf') format('opentype'); }
+@font-face { font-family:'Pretendard'; font-weight:500;
+  src:url('../../../assets/fonts/Pretendard-Medium.otf') format('opentype'); }
+
+html,body { margin:0; padding:0; overflow:hidden;
+  font-family:'Pretendard',-apple-system,sans-serif; }
+
+/* 앱 홈 배경의 "몽글몽글한" 파스텔 처리를 그대로 가져온다 */
+.bg { position:absolute; inset:0;
+  background:linear-gradient(165deg,#F7F5FE 0%,#EBE5FC 100%); }
+.blob { position:absolute; border-radius:50%; filter:blur(10px); }

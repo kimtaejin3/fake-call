@@ -1,0 +1,29 @@
+/* 앱의 SoftOrb 마스코트를 CSS 로 재현 (docs/DESIGN_V3.md 스펙) */
+.orb {
+  position: relative;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 26%,
+      #CFC3FE 0%, #A896F8 34%, #8B7CF6 62%, #6D5BD0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.orb::after { /* 바닥 그림자 */
+  content: '';
+  position: absolute;
+  left: 12%; right: 12%;
+  bottom: -7%;
+  height: 9%;
+  border-radius: 50%;
+  background: rgba(109, 91, 208, .22);
+  filter: blur(var(--shadow-blur, 14px));
+  z-index: -1;
+}
+.eyes { display: flex; gap: var(--eye-gap); }
+.eye {
+  width: var(--eye-w);
+  height: var(--eye-h);
+  border-radius: 999px;
+  background: #fff;
+}
