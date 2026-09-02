@@ -35,6 +35,8 @@ class _CallCompleteScreenState extends ConsumerState<CallCompleteScreen> {
       'likelihood: ${_likelihoodIndex != null ? _kLikelihoodOptions[_likelihoodIndex!] : null}',
     );
     final setup = ref.read(callSetupProvider);
+    // 기록 탭은 화면에서 뺐지만 적재는 계속한다 — 다시 보여주기로 하면
+    // 탭만 되살리면 되도록.
     ref.read(callHistoryProvider.notifier).add(
           CallRecord(
             callerName: setup.caller?.name ?? '알 수 없음',

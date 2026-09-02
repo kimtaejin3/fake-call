@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../history/presentation/history_tab.dart';
 import '../../home/presentation/home_tab.dart';
 import '../../settings/presentation/settings_tab.dart';
 
-/// App shell: bottom-navigation host for the three main tabs (홈/기록/설정).
+/// App shell: bottom-navigation host for the two main tabs (홈/설정).
 ///
 /// Uses [IndexedStack] so switching tabs preserves each tab's scroll
 /// position and state instead of rebuilding it from scratch.
@@ -21,7 +20,6 @@ class _ShellScreenState extends State<ShellScreen> {
 
   static const _tabs = [
     HomeTab(),
-    HistoryTab(),
     SettingsTab(),
   ];
 
@@ -61,17 +59,6 @@ class _ShellScreenState extends State<ShellScreen> {
                 color: AppColors.accent,
               ),
               label: '홈',
-            ),
-            NavigationDestination(
-              icon: const Icon(
-                Icons.history,
-                color: AppColors.textSecondary,
-              ),
-              selectedIcon: const Icon(
-                Icons.history,
-                color: AppColors.accent,
-              ),
-              label: '기록',
             ),
             NavigationDestination(
               icon: const Icon(
