@@ -12,6 +12,7 @@ import '../../../core/theme/call_theme.dart';
 import '../../../shared/models/caller.dart';
 import '../../../shared/widgets/call_buttons.dart';
 import '../../../shared/widgets/caller_avatar.dart';
+import '../../../shared/widgets/soft_orb.dart';
 import '../../settings/application/settings_provider.dart';
 import '../application/call_setup_provider.dart';
 
@@ -179,6 +180,8 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
       child: Column(
         children: [
           const Spacer(flex: 3),
+          const SoftOrb(size: 120, showFace: true),
+          const SizedBox(height: 28),
           Text(
             '$_remainingSeconds',
             style: const TextStyle(

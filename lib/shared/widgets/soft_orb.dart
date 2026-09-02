@@ -6,11 +6,12 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 
-/// A soft, cute gradient "blob" mascot with a simple two-eyed face.
+/// 앱 마스코트 — 숨쉬는 그라데이션 구체에 윙크하는 얼굴.
 ///
-/// Replaces the old dark/neon [GlowOrb] for the v3 light-pastel redesign.
-/// No wave lines, no neon rings — just a breathing gradient sphere, a soft
-/// blurred shadow beneath it, and a friendly blinking face.
+/// 평소에는 눈 두 개지만 몇 초에 한 번 윙크한다. 이 앱은 사용자가 곤란한
+/// 자리에서 빠져나가도록 대신 전화를 걸어주는 공범이고, 윙크가 그 관계를 한
+/// 번에 말한다. 다만 계속 감고 있으면 그냥 정지 그림이라, 가끔 한 번씩
+/// 지나가야 살아 있어 보인다.
 class SoftOrb extends StatefulWidget {
   const SoftOrb({
     super.key,
@@ -46,6 +47,9 @@ class _SoftOrbState extends State<SoftOrb> with TickerProviderStateMixin {
   late final AnimationController _bounceController;
   Timer? _blinkTimer;
 
+  /// 이번에 감는 것이 윙크(오른눈만)인지, 일반 깜빡임(양눈)인지.
+  bool _isWink = false;
+
   @override
   void initState() {
     super.initState();
@@ -73,15 +77,22 @@ class _SoftOrbState extends State<SoftOrb> with TickerProviderStateMixin {
 
   void _scheduleBlink() {
     _blinkTimer?.cancel();
-    final delayMs = 4000 + _random.nextInt(1000); // 4-5s
+    final delayMs = 3200 + _random.nextInt(1400); // 3.2-4.6s
     _blinkTimer = Timer(Duration(milliseconds: delayMs), _runBlink);
   }
 
   Future<void> _runBlink() async {
     if (!mounted || !widget.animate) return;
+    // 셋 중 두 번은 윙크. 매번 윙크하면 버릇처럼 보이고, 어쩌다 한 번이면
+    // 못 보고 지나친다.
+    _isWink = _random.nextInt(3) != 0;
     try {
       await _blinkController.forward();
       if (!mounted) return;
+      if (_isWink) {
+        await Future<void>.delayed(const Duration(milliseconds: 420));
+        if (!mounted || !widget.animate) return;
+      }
       await _blinkController.reverse();
     } on TickerCanceled {
       return;
@@ -207,38 +218,111 @@ class _SoftOrbState extends State<SoftOrb> with TickerProviderStateMixin {
   }
 
   Widget _buildFace(double orbSize) {
-    final gap = orbSize * 0.16;
+    final gap = orbSize * 0.14;
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _buildEye(orbSize, phaseOffset: 0),
         SizedBox(width: gap),
-        _buildEye(orbSize, phaseOffset: math.pi / 4),
+        _buildEye(orbSize, phaseOffset: math.pi / 4, isWinkEye: true),
       ],
     );
   }
 
-  Widget _buildEye(double orbSize, {required double phaseOffset}) {
-    final blink = _blinkController.value;
-    final heightScale = (1.0 - 0.85 * blink).clamp(0.15, 1.0);
+  /// 말하는 중일 때 눈이 통통 튀는 정도.
+  double _eyeBounce(double orbSize, double phaseOffset) {
+    if (!widget.animate || !widget.speaking) return 0;
+    return -orbSize *
+        0.05 *
+        math.sin(_bounceController.value * math.pi + phaseOffset).abs();
+  }
+
+  Widget _buildEye(
+    double orbSize, {
+    required double phaseOffset,
+    bool isWinkEye = false,
+  }) {
+    // 윙크 중이면 감기는 건 윙크하는 눈 하나뿐이다.
+    final closing = (_isWink && !isWinkEye) ? 0.0 : _blinkController.value;
+    final heightScale = (1.0 - 0.95 * closing).clamp(0.05, 1.0);
     final eyeWidth = orbSize * 0.11;
     final eyeHeight = orbSize * 0.24;
-    final bounce = widget.animate && widget.speaking
-        ? -orbSize *
-              0.05 *
-              math.sin(_bounceController.value * math.pi + phaseOffset).abs()
+    final bounce = _eyeBounce(orbSize, phaseOffset);
+
+    // 윙크할 때만 감은 눈 호를 띄운다(일반 깜빡임은 눌리기만 한다).
+    // 눈과 호가 같은 속도로 겹치면 전환 중간에 둘이 함께 보여 뭉개지므로,
+    // 눈이 절반 넘게 감긴 뒤에야 호가 나타나게 타이밍을 어긋낸다.
+    final arcOpacity = (isWinkEye && _isWink)
+        ? ((closing - 0.45) / 0.55).clamp(0.0, 1.0)
         : 0.0;
 
     return Transform.translate(
       offset: Offset(0, bounce),
-      child: Container(
-        width: eyeWidth,
-        height: eyeHeight * heightScale,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(eyeWidth / 2),
+      child: SizedBox(
+        width: orbSize * 0.20,
+        height: eyeHeight,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: eyeWidth,
+              height: eyeHeight * heightScale,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(eyeWidth / 2),
+              ),
+            ),
+            if (arcOpacity > 0)
+              Opacity(
+                opacity: arcOpacity.clamp(0.0, 1.0),
+                child: CustomPaint(
+                  size: Size(orbSize * 0.20, eyeHeight),
+                  // 너무 납작하면 둥근 끝이 뭉쳐 덩어리로 보이고, 너무
+                  // 높으면 갈매기 표시(^)처럼 뾰족해진다. 이 비율이 감은
+                  // 눈으로 읽히는 지점.
+                  painter: _WinkPainter(
+                    strokeWidth: orbSize * 0.062,
+                    rise: orbSize * 0.068,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
+}
+
+/// 감은 눈 하나를 그린다. 위로 볼록한 호에 둥근 끝을 붙여, 웃으며 감은
+/// 눈처럼 보이게 한다.
+class _WinkPainter extends CustomPainter {
+  const _WinkPainter({required this.strokeWidth, required this.rise});
+
+  final double strokeWidth;
+
+  /// 호가 가운데에서 위로 솟는 높이.
+  final double rise;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final baseY = size.height / 2 + rise / 2;
+    // 양 끝을 선 두께만큼 들여 그리면 호의 실제 폭이 그만큼 줄어 가팔라진다.
+    // 끝까지 그리고 둥근 끝(strokeCap)이 밖으로 뻗게 둔다.
+    final path = Path()
+      ..moveTo(0, baseY)
+      // 이차 베지어의 정점은 제어점의 절반만큼 올라가므로 rise 의 두 배를 준다.
+      ..quadraticBezierTo(size.width / 2, baseY - rise * 2, size.width, baseY);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_WinkPainter old) =>
+      old.strokeWidth != strokeWidth || old.rise != rise;
 }
