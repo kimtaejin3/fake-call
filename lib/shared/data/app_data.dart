@@ -8,6 +8,7 @@ const List<Caller> kCallers = [
     voiceId: 'voice_female_01',
     persona: 'concerned_parent',
     emoji: '👩',
+    phoneNumber: '010-2481-7739',
   ),
   Caller(
     id: 'dad',
@@ -15,6 +16,7 @@ const List<Caller> kCallers = [
     voiceId: 'voice_male_01',
     persona: 'concerned_parent',
     emoji: '👨',
+    phoneNumber: '010-3157-2064',
   ),
   Caller(
     id: 'friend',
@@ -22,6 +24,7 @@ const List<Caller> kCallers = [
     voiceId: 'voice_female_02',
     persona: 'close_friend',
     emoji: '🧑',
+    phoneNumber: '010-5023-8816',
   ),
   Caller(
     id: 'boss',
@@ -29,6 +32,7 @@ const List<Caller> kCallers = [
     voiceId: 'voice_male_02',
     persona: 'strict_boss',
     emoji: '👔',
+    phoneNumber: '010-4470-1195',
   ),
   Caller(
     id: 'partner',
@@ -36,6 +40,7 @@ const List<Caller> kCallers = [
     voiceId: 'voice_female_03',
     persona: 'loving_partner',
     emoji: '💛',
+    phoneNumber: '010-8862-3307',
   ),
 ];
 
