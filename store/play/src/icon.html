@@ -1,15 +1,20 @@
-<!doctype html><html><head><meta charset="utf-8">
-<link rel="stylesheet" href="_orb.css">
-<style>
-  html,body { margin:0; padding:0; width:512px; height:512px; overflow:hidden; }
-  body {
-    background: radial-gradient(circle at 50% 34%, #F4F1FE 0%, #E4DDFB 100%);
-    display:flex; align-items:center; justify-content:center;
-  }
-  .orb {
-    width: 320px; height: 320px;
-    --eye-w: 42px; --eye-h: 92px; --eye-gap: 46px;
-    --shadow-blur: 26px;
-  }
-</style></head>
-<body><div class="orb"><div class="eyes"><div class="eye"></div><div class="eye"></div></div></div></body></html>
+<!doctype html><html><head><meta charset="utf-8"><style>
+  html,body { margin:0; padding:0; width:100vw; height:100vw; overflow:hidden; }
+  body { background: radial-gradient(circle at 50% 34%, #F4F1FE 0%, #E4DDFB 100%);
+         display:flex; align-items:center; justify-content:center; }
+  .orb { width:62.5vw; height:62.5vw; position:relative; border-radius:50%;
+    background: radial-gradient(circle at 32% 26%,
+      #CFC3FE 0%, #A896F8 34%, #8B7CF6 62%, #6D5BD0 100%); }
+  .orb::after { content:''; position:absolute; left:12%; right:12%; bottom:-7%;
+    height:9%; border-radius:50%; background:rgba(109,91,208,.22);
+    filter:blur(5vw); z-index:-1; }
+  svg { position:absolute; inset:0; }
+</style></head><body>
+  <!-- 앱 안에서는 가끔 윙크하지만, 아이콘은 한 장이라 가장 이 앱다운
+       순간(윙크)을 고정해 둔다. -->
+  <div class="orb"><svg viewBox="0 0 320 320">
+    <rect x="106" y="122" width="35" height="76" rx="17.5" fill="#fff"/>
+    <path d="M172 174 q22 -31 44 0" stroke="#fff" stroke-width="21"
+          stroke-linecap="round" fill="none"/>
+  </svg></div>
+</body></html>

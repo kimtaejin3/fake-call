@@ -99,7 +99,11 @@ FEATURE_HTML = f"""<!doctype html><html><head><meta charset="utf-8">
     <p>정해둔 시간에 걸려오는 전화</p>
   </div>
   <div class="art">
-    <div class="orb"><div class="eyes"><div class="eye"></div><div class="eye"></div></div></div>
+    <div class="orb"><svg viewBox="0 0 320 320" style="position:absolute;inset:0">
+      <rect x="106" y="122" width="35" height="76" rx="17.5" fill="#fff"/>
+      <path d="M172 174 q22 -31 44 0" stroke="#fff" stroke-width="21"
+            stroke-linecap="round" fill="none"/>
+    </svg></div>
   </div>
 </div></body></html>"""
 

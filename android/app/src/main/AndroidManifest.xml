@@ -4,7 +4,7 @@
          wait-for-silence) against the AI's TTS voice. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
-        android:label="ai_fake_call"
+        android:label="핑계콜"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

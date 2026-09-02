@@ -10,7 +10,7 @@ class AiFakeCallApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'AI Fake Call',
+      title: '핑계콜',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       darkTheme: AppTheme.dark,
