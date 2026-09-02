@@ -19,6 +19,7 @@ class SoftOrb extends StatefulWidget {
     this.animate = true,
     this.speaking = false,
     this.showFace = true,
+    this.holdingPhone = true,
   });
 
   /// Diameter of the orb (the widget itself is slightly taller to make room
@@ -35,9 +36,26 @@ class SoftOrb extends StatefulWidget {
   /// Whether to draw the two-eyed face at all.
   final bool showFace;
 
+  /// 귀에 스마트폰을 대고 있는 모습으로 그릴지. 앱 아이콘과 같은 구도다.
+  /// 전화 앱의 마스코트라는 걸 형태로 보여준다.
+  final bool holdingPhone;
+
   @override
   State<SoftOrb> createState() => _SoftOrbState();
 }
+
+/// 오브 지름(D)을 1 로 봤을 때의 배치 값. 앱 아이콘(store/play/src/icon.html)
+/// 과 같은 구도라 두 그림이 어긋나지 않는다.
+const _kArtWidth = 1.20;      // 폰까지 포함한 전체 폭
+const _kPhoneLeft = 0.845;
+const _kPhoneTop = 0.182;
+const _kPhoneWidth = 0.30;
+const _kPhoneHeight = 0.618;
+const _kPhoneTilt = 18 * math.pi / 180;
+
+/// 폰이 붙으면 얼굴을 살짝 왼쪽으로 옮긴다 — 가운데 그대로 두면 폰 쪽으로
+/// 쏠려 보인다.
+const _kFaceShift = -0.073;
 
 class _SoftOrbState extends State<SoftOrb> with TickerProviderStateMixin {
   final math.Random _random = math.Random();
@@ -138,9 +156,11 @@ class _SoftOrbState extends State<SoftOrb> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final extra = widget.size * 0.16;
+    final artWidth =
+        widget.size * (widget.holdingPhone ? _kArtWidth : 1.0);
     return RepaintBoundary(
       child: SizedBox(
-        width: widget.size,
+        width: artWidth,
         height: widget.size + extra,
         child: AnimatedBuilder(
           animation: Listenable.merge([
@@ -156,23 +176,81 @@ class _SoftOrbState extends State<SoftOrb> with TickerProviderStateMixin {
             final floatY = widget.animate
                 ? widget.size * 0.02 * math.sin(t * 2 * math.pi)
                 : 0.0;
-            final orbSize = widget.size * breathe;
 
             return Stack(
               clipBehavior: Clip.none,
-              alignment: Alignment.topCenter,
               children: [
                 Positioned(
                   top: widget.size * 0.9 + floatY,
+                  left: (widget.size - widget.size * 0.62) / 2,
                   child: _buildShadow(),
                 ),
+                // 오브와 폰은 한 덩어리로 숨쉬고 떠야 한다 — 따로 움직이면
+                // 폰이 귀에서 떨어진다.
                 Positioned(
-                  top: (widget.size - orbSize) / 2 + floatY,
-                  child: _buildBody(orbSize),
+                  left: 0,
+                  top: floatY,
+                  child: Transform.scale(
+                    scale: breathe,
+                    child: SizedBox(
+                      width: artWidth,
+                      height: widget.size,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Positioned(
+                            left: 0,
+                            top: 0,
+                            child: _buildBody(widget.size),
+                          ),
+                          if (widget.holdingPhone)
+                            Positioned(
+                              left: widget.size * _kPhoneLeft,
+                              top: widget.size * _kPhoneTop,
+                              child: _buildPhone(widget.size),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  /// 귀에 댄 스마트폰. 흰 몸체에 그림자를 줘야 밝은 배경에서도 떠 보인다.
+  Widget _buildPhone(double orbSize) {
+    final w = orbSize * _kPhoneWidth;
+    final h = orbSize * _kPhoneHeight;
+    return Transform.rotate(
+      angle: _kPhoneTilt,
+      child: Container(
+        width: w,
+        height: h,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(w * 0.30),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF5B49B8).withValues(alpha: 0.30),
+              blurRadius: orbSize * 0.06,
+              offset: Offset(0, orbSize * 0.022),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Container(
+            width: w * 0.64,
+            height: h * 0.75,
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.40),
+              borderRadius: BorderRadius.circular(w * 0.15),
+            ),
+          ),
         ),
       ),
     );
@@ -213,7 +291,17 @@ class _SoftOrbState extends State<SoftOrb> with TickerProviderStateMixin {
           stops: [0.0, 0.55, 1.0],
         ),
       ),
-      child: widget.showFace ? Center(child: _buildFace(orbSize)) : null,
+      child: widget.showFace
+          ? Center(
+              child: Transform.translate(
+                offset: Offset(
+                  widget.holdingPhone ? orbSize * _kFaceShift : 0,
+                  0,
+                ),
+                child: _buildFace(orbSize),
+              ),
+            )
+          : null,
     );
   }
 
