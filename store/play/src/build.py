@@ -20,30 +20,19 @@ CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 PHONE_W, PHONE_H = 1080, 1920      # 폰 스크린샷 (9:16)
 FEATURE_W, FEATURE_H = 1024, 500   # 피처 그래픽 (정확히 이 크기여야 함)
 
-# (원본, 출력 파일명, 큰 카피, 작은 카피)
+# (원본, 출력 파일명, 카피)
+#
+# 기능을 하나씩 설명하지 않는다. 사용자는 키패드가 진짜 같아서 설치하는 게
+# 아니라 곤란한 자리에서 빠져나오고 싶어서 설치한다. 각 장은 기능이 아니라
+# 그 순간을 말한다.
 SCREENS = [
-    ("p_incoming.png", "01-incoming",
-     "진짜 전화와<br>구분되지 않아요",
-     "실제 시스템 전화 화면 그대로"),
-    ("p_home.png", "02-home",
-     "이름과 시간만<br>정하면 끝",
-     "누가, 몇 초 뒤에 — 두 가지면 충분해요"),
-    ("p_active.png", "03-active",
-     "받은 뒤에도<br>자연스럽게",
-     "통화 시간, 음소거, 스피커까지 그대로"),
-    ("p_countdown.png", "04-countdown",
-     "예약한 시간에<br>정확히 울려요",
-     "지금 · 10초 · 30초 · 1분 · 3분"),
-    ("p_ringsheet.png", "05-ringtone",
-     "소리 없이<br>진동만으로",
-     "조용해야 하는 자리를 위해"),
-    ("p_keypad.png", "06-keypad",
-     "키패드까지<br>실제 그대로",
-     "눌러보면 숫자판이 올라와요"),
+    ("p_incoming.png", "01-incoming", "정해둔 시간에<br>전화가 옵니다"),
+    ("p_home.png", "02-home", "이름과 시간만<br>정하면 됩니다"),
+    ("p_active.png", "03-active", "받아도<br>자연스럽습니다"),
 ]
 
 
-def screenshot_html(raw: str, big: str, small: str) -> str:
+def screenshot_html(raw: str, big: str) -> str:
     """스토어 스크린샷 한 장의 HTML."""
     return f"""<!doctype html><html><head><meta charset="utf-8">
 <link rel="stylesheet" href="_base.css">
@@ -57,12 +46,11 @@ def screenshot_html(raw: str, big: str, small: str) -> str:
              background:radial-gradient(circle,rgba(196,181,253,.28),transparent 70%); }}
   .wrap {{ position:relative; height:100%;
            display:flex; flex-direction:column; align-items:center; }}
-  h1 {{ margin:120px 0 0; font-size:76px; line-height:1.24; font-weight:700;
-        color:#332E52; text-align:center; letter-spacing:-1.5px; }}
-  p  {{ margin:26px 0 0; font-size:33px; font-weight:500;
-        color:#7E77A6; text-align:center; }}
+  h1 {{ margin:132px 0 0; font-size:80px; line-height:1.24; font-weight:700;
+        color:#332E52; text-align:center; letter-spacing:-1.8px;
+        word-break:keep-all; }}
   /* 흰 베젤 + 부드러운 그림자로 기기처럼 보이게 */
-  .device {{ margin-top:64px; width:716px; padding:11px; background:#fff;
+  .device {{ margin-top:96px; width:716px; padding:11px; background:#fff;
              border-radius:56px; box-shadow:0 30px 70px rgba(74,58,140,.22); }}
   .device img {{ display:block; width:100%; border-radius:46px; }}
 </style></head><body>
@@ -70,7 +58,6 @@ def screenshot_html(raw: str, big: str, small: str) -> str:
 <div class="blob a"></div><div class="blob b"></div><div class="blob c"></div>
 <div class="wrap">
   <h1>{big}</h1>
-  <p>{small}</p>
   <div class="device"><img src="raw/{raw}"></div>
 </div></body></html>"""
 
@@ -104,7 +91,7 @@ FEATURE_HTML = f"""<!doctype html><html><head><meta charset="utf-8">
 <div class="wrap">
   <div class="copy">
     <h1>말 꺼내기 어려울 땐,<br>먼저 일어나도 괜찮아요</h1>
-    <p>정해둔 시간에 걸려오는, 진짜 같은 전화 한 통</p>
+    <p>정해둔 시간에 걸려오는 전화</p>
   </div>
   <div class="art">
     <div class="orb"><div class="eyes"><div class="eye"></div><div class="eye"></div></div></div>
@@ -133,12 +120,11 @@ def render(html: str, name: str, w: int, h: int) -> Path:
 
 def main() -> None:
     made = []
-    for raw, name, big, small in SCREENS:
+    for raw, name, big in SCREENS:
         if not (SRC / "raw" / raw).exists():
             print(f"  건너뜀 (원본 없음): {raw}")
             continue
-        made.append(render(screenshot_html(raw, big, small),
-                           name, PHONE_W, PHONE_H))
+        made.append(render(screenshot_html(raw, big), name, PHONE_W, PHONE_H))
     made.append(render(FEATURE_HTML, "feature-graphic", FEATURE_W, FEATURE_H))
 
     for f in made:
