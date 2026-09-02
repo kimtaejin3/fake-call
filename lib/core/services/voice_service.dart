@@ -67,8 +67,13 @@ class _ScriptLine {
 /// AI 음성(TTS) 출력 기본값.
 ///
 /// 지금은 꺼져 있다 — 합성 음성이 오히려 "가짜 통화"임을 드러내서, 화면만
-/// 진짜처럼 보이고 소리는 나지 않는 편이 낫다는 판단. 되살리려면 이 값을
-/// true 로 바꾸면 되고, 그러면 TTS 와 마이크 턴테이킹이 함께 돌아온다.
+/// 진짜처럼 보이고 소리는 나지 않는 편이 낫다는 판단.
+///
+/// 되살리려면 이 값을 true 로 바꾸는 것만으로는 부족하다. 마이크 권한 선언을
+/// 지워둔 상태라 함께 되돌려야 한다 — Android 매니페스트의 RECORD_AUDIO
+/// `tools:node="remove"` 블록을 삭제하고, iOS Info.plist 에
+/// NSMicrophoneUsageDescription 를 다시 넣어야 한다. iOS 는 이 키 없이
+/// 마이크를 건드리면 앱이 죽는다.
 const bool kAiVoiceEnabled = false;
 
 class MockVoiceService implements VoiceService {

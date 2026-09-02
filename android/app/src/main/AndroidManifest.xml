@@ -1,8 +1,11 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Required so the app can listen to the mic during an active call to
-         detect when the user is speaking, for turn-taking (barge-in +
-         wait-for-silence) against the AI's TTS voice. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- AI 음성(kAiVoiceEnabled)이 꺼져 있어 마이크를 쓰지 않는다.
+         `record` 플러그인이 자기 매니페스트에 RECORD_AUDIO 를 선언해 병합되므로,
+         우리 쪽에서 지우는 것만으로는 최종 APK 에서 빠지지 않는다. tools:node
+         로 병합 결과에서 제거한다. 음성을 되살릴 때 이 블록을 지우면 된다. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"
+        tools:node="remove"/>
     <application
         android:label="핑계콜"
         android:name="${applicationName}"

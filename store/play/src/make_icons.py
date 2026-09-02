@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """마스코트 아이콘을 각 플랫폼이 요구하는 크기로 내보낸다.
 
-icon.html 을 headless Chrome 으로 창 크기만 바꿔가며 렌더한다. 벡터(CSS
-그라데이션 + SVG)라 어느 크기에서도 다시 그려지므로, 큰 이미지를 축소할
-때 생기는 뭉개짐이 없다.
+한 번 크게(1024) 렌더한 뒤 sips 로 줄인다. 크기별로 Chrome 을 다시 부르면
+안 되는 이유: headless Chrome 은 창 크기에 최소값이 있어 `--window-size=48,48`
+같은 값이 무시되고 더 큰 뷰포트로 렌더된다. vw 로 잡은 요소는 그 큰 뷰포트를
+기준으로 배치되는데 스크린샷은 좌상단만 잘라내므로, 가운데 있어야 할 오브가
+우측 아래로 밀려 잘린다.
 
 사용법:  python3 make_icons.py
 """
@@ -29,27 +31,42 @@ IOS = {                                    # Contents.json 이 참조하는 파�
 }
 
 
-def render(out: Path, size: int) -> None:
-    out.parent.mkdir(parents=True, exist_ok=True)
+MASTER = 1024
+
+
+def render_master(out: Path) -> None:
+    """원본 한 장을 벡터 그대로 렌더한다."""
     subprocess.run(
         [CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
          "--force-device-scale-factor=1", "--allow-file-access-from-files",
          "--virtual-time-budget=3000",
-         f"--screenshot={out}", f"--window-size={size},{size}",
+         f"--screenshot={out}", f"--window-size={MASTER},{MASTER}",
          f"file://{SRC / 'icon.html'}"],
         capture_output=True, check=False,
     )
-    assert out.exists(), f"렌더 실패: {out}"
+    assert out.exists(), "원본 렌더 실패"
+
+
+def resize(master: Path, out: Path, size: int) -> None:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["sips", "-z", str(size), str(size), str(master),
+                    "--out", str(out)], capture_output=True, check=True)
+    assert out.exists(), f"축소 실패: {out}"
 
 
 def main() -> None:
+    master = SRC / "_icon-master.png"
+    render_master(master)
+
     for density, size in ANDROID.items():
-        render(ROOT / f"android/app/src/main/res/mipmap-{density}/ic_launcher.png",
+        resize(master,
+               ROOT / f"android/app/src/main/res/mipmap-{density}/ic_launcher.png",
                size)
     ios_dir = ROOT / "ios/Runner/Assets.xcassets/AppIcon.appiconset"
     for name, size in IOS.items():
-        render(ios_dir / name, size)
-    render(SRC.parent / "icon-512.png", 512)   # Play 스토어 등록용
+        resize(master, ios_dir / name, size)
+    resize(master, SRC.parent / "icon-512.png", 512)   # Play 스토어 등록용
+    master.unlink()
     print(f"  Android {len(ANDROID)}개, iOS {len(IOS)}개, 스토어 1개 생성")
 
 
