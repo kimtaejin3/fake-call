@@ -107,4 +107,58 @@ void main() {
 
     expect(prefs.getString(PrefKeys.lastCallerName), '박팀장');
   });
+
+  testWidgets('저장해 둔 이름 태그를 켤 때 읽어온다', (tester) async {
+    await pumpAppWith(tester, {
+      PrefKeys.callerTags: ['김대리', '박팀장'],
+    });
+
+    expect(find.widgetWithText(ActionChip, '김대리'), findsOneWidget);
+    expect(find.widgetWithText(ActionChip, '박팀장'), findsOneWidget);
+    // 기본값은 저장된 값이 있으면 쓰지 않는다.
+    expect(find.widgetWithText(ActionChip, '엄마'), findsNothing);
+  });
+
+  testWidgets('기본 태그에는 관계를 가리키는 말이 없다', (tester) async {
+    await pumpAppWith(tester, {});
+
+    // 연락처에 저장해 둘 이름만 남긴다. "직장 상사" 가 수신 화면에 뜨면
+    // 그 자체로 가짜라는 표시가 된다.
+    for (final name in ['엄마', '아빠']) {
+      expect(find.widgetWithText(ActionChip, name), findsOneWidget);
+    }
+    for (final name in ['친구', '직장 상사', '연인']) {
+      expect(find.widgetWithText(ActionChip, name), findsNothing);
+    }
+  });
+
+  testWidgets('입력한 이름을 태그로 저장하면 기기에 남는다', (tester) async {
+    final prefs = await pumpAppWith(tester, {});
+
+    await tester.enterText(find.byType(TextField), '박선배');
+    await settle(tester);
+
+    // 저장되지 않은 이름일 때만 '저장' 칩이 뜬다.
+    await tester.tap(find.widgetWithText(ActionChip, '저장'));
+    await settle(tester);
+
+    expect(prefs.getStringList(PrefKeys.callerTags), contains('박선배'));
+    expect(find.widgetWithText(ActionChip, '박선배'), findsOneWidget);
+    // 이미 저장했으니 '저장' 칩은 사라진다.
+    expect(find.widgetWithText(ActionChip, '저장'), findsNothing);
+  });
+
+  testWidgets('태그를 길게 눌러 삭제한다', (tester) async {
+    final prefs = await pumpAppWith(tester, {
+      PrefKeys.callerTags: ['엄마', '김대리'],
+    });
+
+    await tester.longPress(find.widgetWithText(ActionChip, '김대리'));
+    await settle(tester);
+    await tester.tap(find.text('삭제'));
+    await settle(tester);
+
+    expect(prefs.getStringList(PrefKeys.callerTags), ['엄마']);
+    expect(find.widgetWithText(ActionChip, '김대리'), findsNothing);
+  });
 }

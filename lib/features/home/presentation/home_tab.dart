@@ -9,6 +9,7 @@ import '../../../shared/widgets/soft_orb.dart';
 import '../../../shared/data/app_data.dart';
 import '../../../shared/models/caller.dart';
 import '../../fake_call/application/call_setup_provider.dart';
+import '../application/caller_tags_provider.dart';
 
 /// 홈 탭 — 앱의 메인 화면(하단 네비 셸 안에 들어간다).
 ///
@@ -167,7 +168,8 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   ),
                   _NameField(controller: _nameController),
                   const SizedBox(height: 12),
-                  _PresetNameChips(
+                  _CallerTagChips(
+                    tags: ref.watch(callerTagsProvider),
                     selectedName: _name,
                     onSelect: (name) {
                       _nameController
@@ -177,6 +179,13 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                         );
                       FocusScope.of(context).unfocus();
                     },
+                    canAdd: _name.isNotEmpty &&
+                        !ref.watch(callerTagsProvider).contains(_name),
+                    onAdd: () {
+                      ref.read(callerTagsProvider.notifier).add(_name);
+                      FocusScope.of(context).unfocus();
+                    },
+                    onRemove: _confirmRemoveTag,
                   ),
                   const SizedBox(height: 18),
                   _BottomPillBar(
@@ -195,6 +204,37 @@ class _HomeTabState extends ConsumerState<HomeTab> {
         ],
       ),
     );
+  }
+
+  /// 태그 삭제는 되돌리기 어려우니 한 번 묻는다.
+  Future<void> _confirmRemoveTag(String name) async {
+    final remove = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text("'$name' 을(를) 지울까요?"),
+        titleTextStyle: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(
+              '삭제',
+              style: TextStyle(color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (remove ?? false) {
+      ref.read(callerTagsProvider.notifier).remove(name);
+    }
   }
 
   void _showDelaySheet(BuildContext context, WidgetRef ref) {
@@ -316,15 +356,26 @@ class _NameField extends StatelessWidget {
   }
 }
 
-/// 자주 쓰는 이름을 한 번에 채워 넣는 칩 줄.
-class _PresetNameChips extends StatelessWidget {
-  const _PresetNameChips({
+/// 저장해 둔 이름을 한 번에 채워 넣는 칩 줄.
+///
+/// 마지막 칩은 지금 입력칸에 있는 이름을 태그로 저장하는 버튼이다. 길게
+/// 누르면 지운다.
+class _CallerTagChips extends StatelessWidget {
+  const _CallerTagChips({
+    required this.tags,
     required this.selectedName,
     required this.onSelect,
+    required this.canAdd,
+    required this.onAdd,
+    required this.onRemove,
   });
 
+  final List<String> tags;
   final String selectedName;
   final ValueChanged<String> onSelect;
+  final bool canAdd;
+  final VoidCallback onAdd;
+  final ValueChanged<String> onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -332,26 +383,43 @@ class _PresetNameChips extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        for (final caller in kCallers)
-          ActionChip(
-            label: Text(caller.name),
-            onPressed: () => onSelect(caller.name),
-            backgroundColor: caller.name == selectedName
-                ? AppColors.accent.withValues(alpha: 0.12)
-                : AppColors.surface,
-            side: BorderSide(
-              color: caller.name == selectedName
-                  ? AppColors.accent
-                  : AppColors.surfaceBorder,
+        for (final tag in tags)
+          GestureDetector(
+            onLongPress: () => onRemove(tag),
+            child: ActionChip(
+              label: Text(tag),
+              onPressed: () => onSelect(tag),
+              backgroundColor: tag == selectedName
+                  ? AppColors.accent.withValues(alpha: 0.12)
+                  : AppColors.surface,
+              side: BorderSide(
+                color: tag == selectedName
+                    ? AppColors.accent
+                    : AppColors.surfaceBorder,
+              ),
+              labelStyle: TextStyle(
+                color: tag == selectedName
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight:
+                    tag == selectedName ? FontWeight.w700 : FontWeight.w600,
+              ),
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             ),
-            labelStyle: TextStyle(
-              color: caller.name == selectedName
-                  ? AppColors.textPrimary
-                  : AppColors.textSecondary,
+          ),
+        if (canAdd)
+          ActionChip(
+            avatar: const Icon(Icons.add, size: 17, color: AppColors.accent),
+            label: const Text('저장'),
+            onPressed: onAdd,
+            backgroundColor: AppColors.accent.withValues(alpha: 0.08),
+            side: const BorderSide(color: AppColors.accent),
+            labelStyle: const TextStyle(
+              color: AppColors.accent,
               fontSize: 14,
-              fontWeight: caller.name == selectedName
-                  ? FontWeight.w700
-                  : FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
             shape: const StadiumBorder(),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
