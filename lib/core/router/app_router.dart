@@ -4,7 +4,6 @@ import 'routes.dart';
 import '../../features/shell/presentation/shell_screen.dart';
 import '../../features/fake_call/presentation/incoming_call_screen.dart';
 import '../../features/voice_call/presentation/active_call_screen.dart';
-import '../../features/feedback/presentation/call_complete_screen.dart';
 
 /// Builds a fresh router.
 ///
@@ -28,10 +27,6 @@ GoRouter createAppRouter() => GoRouter(
     GoRoute(
       path: Routes.activeCall,
       builder: (context, state) => const ActiveCallScreen(),
-    ),
-    GoRoute(
-      path: Routes.callComplete,
-      builder: (context, state) => const CallCompleteScreen(),
     ),
   ],
 );

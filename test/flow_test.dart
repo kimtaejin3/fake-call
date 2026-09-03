@@ -6,7 +6,7 @@ import 'package:ai_fake_call/app.dart';
 
 /// 화면이 자리잡을 만큼만 프레임을 돌린다.
 ///
-/// `pumpAndSettle` 을 쓸 수 없는 이유: 홈/완료/기록의 SoftOrb 마스코트가
+/// `pumpAndSettle` 을 쓸 수 없는 이유: 홈의 SoftOrb 마스코트가
 /// 계속 숨쉬는 애니메이션을 돌리므로 위젯 트리가 영영 "정착"하지 않는다.
 /// 애니메이션을 끄는 대신(그건 제품을 테스트에 맞춰 깎는 것) 테스트가
 /// 정해진 시간만 감는다.
@@ -16,7 +16,7 @@ Future<void> settle(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('전체 가짜통화 플로우: 홈 탭 → 수신 → 통화 → 피드백 → 홈',
+  testWidgets('전체 가짜통화 플로우: 홈 탭 → 수신 → 통화 → 홈',
       (tester) async {
     // 홈 탭은 스크롤 가능한 한 화면 구성이라 기본 800x600 테스트 표면에서는
     // 하단 섹션(딜레이 칩/CTA)이 뷰포트 밖에 놓인다. 실제 폰 화면 크기에
@@ -61,21 +61,15 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     expect(find.textContaining('00:0'), findsOneWidget);
 
-    // 통화 종료 → 피드백 화면
+    // 통화 종료 → 곧바로 홈. 중간 화면(설문)은 없다.
     await tester.tap(find.byIcon(Icons.call_end));
     await tester.pump(const Duration(milliseconds: 300));
     await settle(tester);
-    expect(find.text('통화가 종료되었습니다.'), findsOneWidget);
+    expect(find.text('통화가 종료되었습니다.'), findsNothing);
 
-    // 피드백 선택 후 완료 → 홈 복귀
-    await tester.tap(find.textContaining('도움이 됐어요'));
-    await tester.pump();
-    await tester.tap(find.text('완료'));
-    await settle(tester);
-
-    // 홈 탭으로 복귀 + 하단 네비게이션(NavigationBar 또는 BottomNavigationBar) 확인
-    // (call_complete_screen에서 callSetupProvider가 reset되므로 홈의
-    // postFrameCallback이 다시 기본값을 채워 시간 pill이 "30초 후"로 보인다)
+    // 홈 탭으로 복귀 + 하단 네비게이션 확인
+    // (통화 종료 시 callSetupProvider 가 reset 되므로 홈의 postFrameCallback
+    // 이 다시 기본값을 채워 시간 pill 이 "30초 후"로 보인다)
     expect(find.text('30초 후'), findsOneWidget);
     final hasNavigationBar = find.byType(NavigationBar).evaluate().isNotEmpty;
     final hasBottomNavigationBar =

@@ -9,15 +9,11 @@ class CallRecord {
   final DateTime endedAt;
   final int durationSeconds;
 
-  /// 'positive' / 'negative' / null (no feedback given).
-  final String? feedback;
-
   const CallRecord({
     required this.callerName,
     required this.scenarioTitle,
     required this.endedAt,
     required this.durationSeconds,
-    this.feedback,
   });
 }
 
@@ -33,11 +29,3 @@ final callHistoryProvider =
     NotifierProvider<CallHistoryNotifier, List<CallRecord>>(
   CallHistoryNotifier.new,
 );
-
-/// Elapsed seconds of the most recently ended call.
-///
-/// [ActiveCallScreen] writes this right before navigating away so
-/// [CallCompleteScreen] — which has no direct access to the call timer —
-/// can read it back when building the [CallRecord] to store in
-/// [callHistoryProvider].
-final lastCallDurationProvider = StateProvider<int>((ref) => 0);

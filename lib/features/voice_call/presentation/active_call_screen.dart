@@ -83,8 +83,20 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
     unawaited(_eventSub?.cancel());
     final voice = _voiceService;
     if (voice != null) unawaited(voice.stop());
-    ref.read(lastCallDurationProvider.notifier).state = _elapsedSeconds;
-    if (mounted) context.go(Routes.callComplete);
+    // 기록 탭은 화면에서 뺐지만 적재는 계속한다 — 다시 보여주기로 하면
+    // 탭만 되살리면 되도록.
+    final setup = ref.read(callSetupProvider);
+    ref.read(callHistoryProvider.notifier).add(
+          CallRecord(
+            callerName: setup.caller?.name ?? '알 수 없음',
+            scenarioTitle: setup.scenario?.title ?? '알 수 없음',
+            endedAt: DateTime.now(),
+            durationSeconds: _elapsedSeconds,
+          ),
+        );
+    ref.read(callSetupProvider.notifier).reset();
+    // 실제 전화는 끊기면 원래 자리로 돌아간다. 중간 화면을 두지 않는다.
+    if (mounted) context.go(Routes.home);
   }
 
   String get _formattedDuration {

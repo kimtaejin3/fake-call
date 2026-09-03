@@ -9,7 +9,7 @@ import 'package:ai_fake_call/core/theme/app_theme.dart';
 
 /// 화면이 자리잡을 만큼만 프레임을 돌린다.
 ///
-/// `pumpAndSettle` 을 쓸 수 없는 이유: 홈/완료/기록의 SoftOrb 마스코트가
+/// `pumpAndSettle` 을 쓸 수 없는 이유: 홈의 SoftOrb 마스코트가
 /// 계속 숨쉬는 애니메이션을 돌리므로 위젯 트리가 영영 "정착"하지 않는다.
 Future<void> settle(WidgetTester tester) async {
   await tester.pump();

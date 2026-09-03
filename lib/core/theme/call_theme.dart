@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 // 수신/통화 화면 전용 디자인 토큰.
 //
-// 앱의 나머지 화면(홈/설정/완료)은 [AppColors] 의 라이트 파스텔을 쓰지만,
+// 앱의 나머지 화면(홈/설정)은 [AppColors] 의 라이트 파스텔을 쓰지만,
 // 이 두 화면만은 실제 시스템 전화 UI 를 흉내내야 하므로 별도의 다크 팔레트를
 // 쓴다. 파스텔 통화 화면은 옆 사람 눈에 즉시 "앱"으로 보이기 때문이다.
 // (docs/PRD.md — "Incoming/Active Call 화면은 iOS/Android 시스템 전화 UI에서
