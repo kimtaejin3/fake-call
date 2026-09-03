@@ -33,8 +33,26 @@ class IncomingCallScreen extends ConsumerStatefulWidget {
 
 enum _Stage { waiting, ringing }
 
-class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
+/// [ringAt] 까지 남은 초. 이미 지났으면 0.
+///
+/// 남은 시간을 틱마다 1씩 빼지 않고 벽시계로 계산하는 이유: 앱이 백그라운드로
+/// 내려가면 OS 가 프로세스를 재우고 Timer 도 멈춘다. 빼기 방식이면 그동안
+/// 흐른 시간이 통째로 사라져서, 30초를 걸어두고 잠깐 다른 앱을 보다 돌아오면
+/// 여전히 30초가 남아 있다. 마감시각을 들고 있으면 자는 동안 흐른 시간도
+/// 그대로 반영된다.
+@visibleForTesting
+int remainingSecondsUntil(DateTime ringAt, DateTime now) {
+  final ms = ringAt.difference(now).inMilliseconds;
+  if (ms <= 0) return 0;
+  return (ms / 1000).ceil();
+}
+
+class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
+    with WidgetsBindingObserver {
   _Stage _stage = _Stage.waiting;
+
+  /// 벨이 울려야 하는 시각. 지연이 없으면 null.
+  DateTime? _ringAt;
   int _remainingSeconds = 0;
   Timer? _countdownTimer;
   bool _ringtoneStarted = false;
@@ -58,19 +76,41 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
     final delaySeconds = setup.delay?.seconds ?? 0;
     if (delaySeconds <= 0) {
       _startRinging();
-    } else {
-      _remainingSeconds = delaySeconds;
-      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (!mounted) return;
-        setState(() {
-          _remainingSeconds -= 1;
-        });
-        if (_remainingSeconds <= 0) {
-          timer.cancel();
-          _startRinging();
-        }
-      });
+      return;
     }
+
+    WidgetsBinding.instance.addObserver(this);
+    _ringAt = DateTime.now().add(Duration(seconds: delaySeconds));
+    _remainingSeconds = delaySeconds;
+    // 1초보다 자주 확인한다. 마감시각과 틱이 어긋나 표시가 한 박자 늦게
+    // 바뀌는 걸 줄인다.
+    _countdownTimer = Timer.periodic(
+      const Duration(milliseconds: 200),
+      (_) => _tick(),
+    );
+  }
+
+  /// 남은 시간을 다시 계산하고, 다 됐으면 벨을 울린다.
+  void _tick() {
+    if (!mounted) return;
+    final ringAt = _ringAt;
+    if (ringAt == null || _stage == _Stage.ringing) return;
+
+    final remaining = remainingSecondsUntil(ringAt, DateTime.now());
+    if (remaining != _remainingSeconds) {
+      setState(() => _remainingSeconds = remaining);
+    }
+    if (remaining <= 0) {
+      _countdownTimer?.cancel();
+      _startRinging();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 백그라운드에 있는 동안 Timer 는 멈춰 있었다. 돌아오자마자 다시 계산해서,
+    // 그 사이 마감시각이 지났으면 곧바로 울린다.
+    if (state == AppLifecycleState.resumed) _tick();
   }
 
   void _startRinging() {
@@ -109,6 +149,7 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _countdownTimer?.cancel();
     _stopRingtone();
     super.dispose();
