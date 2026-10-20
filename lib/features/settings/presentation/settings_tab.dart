@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/voice_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/call_theme.dart';
 import '../application/settings_provider.dart';
 
 /// 설정 탭.
@@ -77,9 +78,82 @@ class SettingsTab extends ConsumerWidget {
     );
   }
 
+  /// 통화 화면 배경 선택 시트. 이름만으로는 색을 떠올리기 어려우므로
+  /// 실제 그라데이션 견본을 같이 보여준다.
+  void _showBackgroundSheet(BuildContext context, WidgetRef ref) {
+    final current = ref.read(callBackgroundProvider);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const Text(
+                  '통화 화면 배경',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  '내 폰 배경화면과 비슷한 색을 고르면 더 진짜 같아요.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 16,
+                  children: [
+                    for (final background in CallBackground.values)
+                      _BackgroundSwatch(
+                        background: background,
+                        selected: background == current,
+                        onTap: () {
+                          ref
+                              .read(callBackgroundProvider.notifier)
+                              .select(background);
+                          Navigator.of(sheetContext).pop();
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ringtoneMode = ref.watch(ringtoneModeProvider);
+    final callBackground = ref.watch(callBackgroundProvider);
 
     return SafeArea(
       child: ListView(
@@ -109,6 +183,12 @@ class SettingsTab extends ConsumerWidget {
                 onTap: () => _showRingtoneSheet(context, ref),
               ),
               _SettingsTile(
+                icon: Icons.palette_outlined,
+                title: '통화 화면 배경',
+                trailingLabel: callBackground.label,
+                onTap: () => _showBackgroundSheet(context, ref),
+              ),
+              _SettingsTile(
                 icon: Icons.record_voice_over_outlined,
                 title: 'AI 음성',
                 // 아직 내보내지 않은 기능. 고를 수 있는 척하는 대신
@@ -131,6 +211,55 @@ class SettingsTab extends ConsumerWidget {
                 showDivider: false,
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 배경 선택 시트의 견본 하나 — 폰 화면 비율의 작은 그라데이션 카드.
+class _BackgroundSwatch extends StatelessWidget {
+  const _BackgroundSwatch({
+    required this.background,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final CallBackground background;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 112,
+            decoration: BoxDecoration(
+              gradient: background.gradient,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected ? AppColors.accent : AppColors.surfaceBorder,
+                width: selected ? 3 : 1,
+              ),
+            ),
+            child: selected
+                ? const Icon(Icons.check, color: Colors.white, size: 24)
+                : null,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            background.label,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            ),
           ),
         ],
       ),

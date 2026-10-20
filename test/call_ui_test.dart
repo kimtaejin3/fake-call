@@ -80,15 +80,15 @@ void main() {
   }
 
   group('수신 화면', () {
-    testWidgets('iOS: 이름 + 회선 라벨 + 알림/메시지 + 거절/응답', (tester) async {
+    testWidgets('iOS: 이름 + 회선 라벨 + 메시지 보내기/음성 사서함 + 거절/응답', (tester) async {
       await goToIncoming(tester, TargetPlatform.iOS);
 
       expect(find.text('엄마'), findsOneWidget);
       // iOS 는 이름 아래에 회선 종류를 표시한다.
       expect(find.text('휴대전화'), findsOneWidget);
       // 수락/거절 위의 보조 액션 2종.
-      expect(find.text('알림'), findsOneWidget);
-      expect(find.text('메시지'), findsOneWidget);
+      expect(find.text('메시지 보내기'), findsOneWidget);
+      expect(find.text('음성 사서함'), findsOneWidget);
       expect(find.text('거절'), findsOneWidget);
       expect(find.text('응답'), findsOneWidget);
     });
@@ -103,7 +103,7 @@ void main() {
       expect(find.text('거절'), findsOneWidget);
       expect(find.text('응답'), findsOneWidget);
       // iOS 전용 보조 액션은 없어야 한다.
-      expect(find.text('알림'), findsNothing);
+      expect(find.text('음성 사서함'), findsNothing);
     });
 
     testWidgets('마스코트 오브는 수신 화면에 등장하지 않는다', (tester) async {
@@ -115,19 +115,19 @@ void main() {
   });
 
   group('통화 중 화면', () {
-    testWidgets('iOS: 6버튼 그리드 + 통화시간', (tester) async {
+    testWidgets('iOS: 종료가 섞인 6버튼 그리드 + 통화시간', (tester) async {
       await goToActiveCall(tester, TargetPlatform.iOS);
 
       expect(find.text('엄마'), findsOneWidget);
       expect(find.textContaining('00:0'), findsOneWidget);
 
       for (final label in [
-        '음소거',
-        '키패드',
         '스피커',
-        '통화 추가',
         'FaceTime',
-        '연락처',
+        '소리 끔',
+        '더 보기',
+        '종료',
+        '키패드',
       ]) {
         expect(find.text(label), findsOneWidget, reason: '$label 버튼이 있어야 합니다.');
       }

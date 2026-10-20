@@ -12,8 +12,10 @@ import '../../../core/theme/call_theme.dart';
 import '../../../shared/widgets/call_buttons.dart';
 import '../../../shared/widgets/caller_avatar.dart';
 import '../../../shared/widgets/dial_pad.dart';
+import '../../../shared/widgets/ios_call_header.dart';
 import '../../fake_call/application/call_setup_provider.dart';
 import '../../history/application/call_history_provider.dart';
+import '../../settings/application/settings_provider.dart';
 
 /// 통화 중 화면 — iOS/Android 시스템 전화 UI 를 그대로 흉내낸다.
 ///
@@ -126,6 +128,7 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
     final name = caller?.name ?? '';
     final palette = CallPalette.of(context);
     final isIos = callStyleOf(context) == CallStyle.ios;
+    final background = ref.watch(callBackgroundProvider);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -134,88 +137,223 @@ class _ActiveCallScreenState extends ConsumerState<ActiveCallScreen> {
         statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: palette.background.last,
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: palette.background,
-            ),
-          ),
+        backgroundColor: background.colors.last,
+        body: CallBackgroundView(
+          background: background,
           child: SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 24),
-                // 키패드가 올라오면 실제 전화 앱처럼 상단이 접힌다.
-                if (!_showKeypad) ...[
-                  CallerAvatar(
-                    name: name,
-                    size: isIos ? 92 : 100,
-                    variant: CallerAvatarVariant.call,
-                  ),
-                  const SizedBox(height: 20),
-                ],
-                Text(
-                  name,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: isIos ? 32 : 28,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isIos ? _formattedDuration : '통화 중  $_formattedDuration',
-                  style: TextStyle(
-                    color: palette.textSecondary,
-                    fontSize: 17,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-                const Spacer(),
-                if (_showKeypad)
-                  DialPad(
-                    palette: palette,
-                    onHide: () => setState(() => _showKeypad = false),
-                  )
-                else
-                  _ControlGrid(
-                    palette: palette,
-                    isIos: isIos,
-                    micMuted: _micMuted,
-                    speakerOn: _speakerOn,
-                    onToggleMic: () => setState(() => _micMuted = !_micMuted),
-                    onToggleSpeaker: () =>
-                        setState(() => _speakerOn = !_speakerOn),
-                    onShowKeypad: () => setState(() => _showKeypad = true),
-                  ),
-                const Spacer(),
-                _EndCallButton(
-                  palette: palette,
-                  isIos: isIos,
-                  onTap: _ending ? null : _endCall,
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
+            child:
+                isIos ? _buildIos(name, palette) : _buildAndroid(name, palette),
           ),
         ),
       ),
     );
   }
+
+  /// iOS — 실제 아이폰 캡쳐 그대로: 위쪽에 통화시간과 이름, 아래에 종료
+  /// 버튼이 섞인 3x2 그리드. 수신 화면과 머리글 자리가 같아서 응답을 누르면
+  /// "휴대전화" 가 통화시간으로만 바뀐다.
+  Widget _buildIos(String name, CallPalette palette) {
+    return Column(
+      children: [
+        const SizedBox(height: 60),
+        IosCallHeader(
+          caption: _formattedDuration,
+          name: name,
+          palette: palette,
+        ),
+        const Spacer(),
+        if (_showKeypad) ...[
+          DialPad(
+            palette: palette,
+            onHide: () => setState(() => _showKeypad = false),
+          ),
+          const SizedBox(height: 12),
+          _EndCallButton(
+            palette: palette,
+            isIos: true,
+            onTap: _ending ? null : _endCall,
+          ),
+        ] else
+          _IosControlGrid(
+            palette: palette,
+            micMuted: _micMuted,
+            speakerOn: _speakerOn,
+            onToggleMic: () => setState(() => _micMuted = !_micMuted),
+            onToggleSpeaker: () => setState(() => _speakerOn = !_speakerOn),
+            onShowKeypad: () => setState(() => _showKeypad = true),
+            onEnd: _ending ? null : _endCall,
+          ),
+        const SizedBox(height: 38),
+      ],
+    );
+  }
+
+  Widget _buildAndroid(String name, CallPalette palette) {
+    return Column(
+      children: [
+        const SizedBox(height: 24),
+        // 키패드가 올라오면 실제 전화 앱처럼 상단이 접힌다.
+        if (!_showKeypad) ...[
+          CallerAvatar(
+            name: name,
+            size: 100,
+            variant: CallerAvatarVariant.call,
+          ),
+          const SizedBox(height: 20),
+        ],
+        Text(
+          name,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: palette.textPrimary,
+            fontSize: 28,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '통화 중  $_formattedDuration',
+          style: TextStyle(
+            color: palette.textSecondary,
+            fontSize: 17,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        const Spacer(),
+        if (_showKeypad)
+          DialPad(
+            palette: palette,
+            onHide: () => setState(() => _showKeypad = false),
+          )
+        else
+          _AndroidControlGrid(
+            palette: palette,
+            micMuted: _micMuted,
+            speakerOn: _speakerOn,
+            onToggleMic: () => setState(() => _micMuted = !_micMuted),
+            onToggleSpeaker: () => setState(() => _speakerOn = !_speakerOn),
+            onShowKeypad: () => setState(() => _showKeypad = true),
+          ),
+        const Spacer(),
+        _EndCallButton(
+          palette: palette,
+          isIos: false,
+          onTap: _ending ? null : _endCall,
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
 }
 
-/// 통화 중 컨트롤 3x2 그리드.
+/// iOS 통화 중 3x2 그리드 — 스피커/FaceTime/소리 끔, 더 보기/종료/키패드.
+///
+/// 스피커·소리 끔·키패드만 실제로 동작한다. FaceTime 은 실제 화면에서도
+/// 상대가 FaceTime 을 못 쓸 때 흐리게 나오므로 그렇게 그리고, 더 보기는
+/// 눌리는 느낌만 남긴다.
+class _IosControlGrid extends StatelessWidget {
+  const _IosControlGrid({
+    required this.palette,
+    required this.micMuted,
+    required this.speakerOn,
+    required this.onToggleMic,
+    required this.onToggleSpeaker,
+    required this.onShowKeypad,
+    required this.onEnd,
+  });
+
+  final CallPalette palette;
+  final bool micMuted;
+  final bool speakerOn;
+  final VoidCallback onToggleMic;
+  final VoidCallback onToggleSpeaker;
+  final VoidCallback onShowKeypad;
+  final VoidCallback? onEnd;
+
+  static const double _labelSize = 17;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _row([
+            CallControlButton(
+              icon: Icons.volume_up,
+              label: '스피커',
+              palette: palette,
+              active: speakerOn,
+              labelFontSize: _labelSize,
+              onTap: onToggleSpeaker,
+            ),
+            CallControlButton(
+              icon: Icons.videocam,
+              label: 'FaceTime',
+              palette: palette,
+              dimmed: true,
+              labelFontSize: _labelSize,
+              onTap: () {},
+            ),
+            CallControlButton(
+              icon: Icons.mic_off,
+              label: '소리 끔',
+              palette: palette,
+              active: micMuted,
+              labelFontSize: _labelSize,
+              onTap: onToggleMic,
+            ),
+          ]),
+          const SizedBox(height: 18),
+          _row([
+            CallControlButton(
+              icon: Icons.more_horiz,
+              label: '더 보기',
+              palette: palette,
+              labelFontSize: _labelSize,
+              onTap: () {},
+            ),
+            CallActionButton(
+              icon: Icons.call_end,
+              color: palette.decline,
+              borderColor: const Color(0x80FF9A94),
+              label: '종료',
+              labelColor: palette.textPrimary,
+              labelFontSize: _labelSize,
+              size: palette.controlButtonSize,
+              onTap: onEnd ?? () {},
+            ),
+            CallControlButton(
+              icon: Icons.dialpad,
+              label: '키패드',
+              palette: palette,
+              labelFontSize: _labelSize,
+              onTap: onShowKeypad,
+            ),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(List<Widget> buttons) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: buttons,
+    );
+  }
+}
+
+/// Android 통화 중 컨트롤 3x2 그리드.
 ///
 /// 음소거/스피커/키패드만 실제로 동작한다. 나머지는 실제 전화 화면에 있는
 /// 버튼이라 연출상 자리를 지키지만, 가짜 통화에서는 의미가 없어 눌러도
 /// 상태가 바뀌지 않는다(잉크 반응만 남긴다).
-class _ControlGrid extends StatelessWidget {
-  const _ControlGrid({
+class _AndroidControlGrid extends StatelessWidget {
+  const _AndroidControlGrid({
     required this.palette,
-    required this.isIos,
     required this.micMuted,
     required this.speakerOn,
     required this.onToggleMic,
@@ -224,7 +362,6 @@ class _ControlGrid extends StatelessWidget {
   });
 
   final CallPalette palette;
-  final bool isIos;
   final bool micMuted;
   final bool speakerOn;
   final VoidCallback onToggleMic;
@@ -259,49 +396,26 @@ class _ControlGrid extends StatelessWidget {
           ),
         ]),
         const SizedBox(height: 26),
-        _row(
-          isIos
-              ? [
-                  CallControlButton(
-                    icon: Icons.add,
-                    label: '통화 추가',
-                    palette: palette,
-                    onTap: () {},
-                  ),
-                  CallControlButton(
-                    icon: Icons.videocam,
-                    label: 'FaceTime',
-                    palette: palette,
-                    onTap: () {},
-                  ),
-                  CallControlButton(
-                    icon: Icons.person,
-                    label: '연락처',
-                    palette: palette,
-                    onTap: () {},
-                  ),
-                ]
-              : [
-                  CallControlButton(
-                    icon: Icons.person_add_alt,
-                    label: '통화 추가',
-                    palette: palette,
-                    onTap: () {},
-                  ),
-                  CallControlButton(
-                    icon: Icons.pause,
-                    label: '보류',
-                    palette: palette,
-                    onTap: () {},
-                  ),
-                  CallControlButton(
-                    icon: Icons.videocam,
-                    label: '영상 통화',
-                    palette: palette,
-                    onTap: () {},
-                  ),
-                ],
-        ),
+        _row([
+          CallControlButton(
+            icon: Icons.person_add_alt,
+            label: '통화 추가',
+            palette: palette,
+            onTap: () {},
+          ),
+          CallControlButton(
+            icon: Icons.pause,
+            label: '보류',
+            palette: palette,
+            onTap: () {},
+          ),
+          CallControlButton(
+            icon: Icons.videocam,
+            label: '영상 통화',
+            palette: palette,
+            onTap: () {},
+          ),
+        ]),
       ],
     );
   }

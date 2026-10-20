@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/preferences.dart';
+import '../../../core/theme/call_theme.dart';
 
 /// 수신 시 어떻게 알릴지.
 enum RingtoneMode {
@@ -50,4 +51,31 @@ class RingtoneModeNotifier extends Notifier<RingtoneMode> {
 final ringtoneModeProvider =
     NotifierProvider<RingtoneModeNotifier, RingtoneMode>(
   RingtoneModeNotifier.new,
+);
+
+class CallBackgroundNotifier extends Notifier<CallBackground> {
+  @override
+  CallBackground build() {
+    final saved = ref.watch(sharedPreferencesProvider)?.getString(
+          PrefKeys.callBackground,
+        );
+    for (final background in CallBackground.values) {
+      if (background.name == saved) return background;
+    }
+    return CallBackground.purple;
+  }
+
+  void select(CallBackground background) {
+    state = background;
+    ref.read(sharedPreferencesProvider)?.setString(
+          PrefKeys.callBackground,
+          background.name,
+        );
+  }
+}
+
+/// 수신/통화 화면 배경. 기기에 저장되어 앱을 다시 켜도 유지된다.
+final callBackgroundProvider =
+    NotifierProvider<CallBackgroundNotifier, CallBackground>(
+  CallBackgroundNotifier.new,
 );

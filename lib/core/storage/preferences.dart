@@ -20,6 +20,9 @@ abstract class PrefKeys {
   /// 마지막으로 전화를 건 상대 이름.
   static const lastCallerName = 'last_caller_name';
 
+  /// 통화 화면 배경 ([CallBackground] 의 name).
+  static const callBackground = 'call_background';
+
   /// 사용자가 저장해 둔 발신자 이름 태그.
   static const callerTags = 'caller_tags';
 }

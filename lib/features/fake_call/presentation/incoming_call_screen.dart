@@ -12,6 +12,7 @@ import '../../../core/theme/call_theme.dart';
 import '../../../shared/models/caller.dart';
 import '../../../shared/widgets/call_buttons.dart';
 import '../../../shared/widgets/caller_avatar.dart';
+import '../../../shared/widgets/ios_call_header.dart';
 import '../../../shared/widgets/soft_orb.dart';
 import '../../settings/application/settings_provider.dart';
 import '../application/call_setup_provider.dart';
@@ -174,8 +175,9 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
     final caller = ref.watch(callSetupProvider).caller;
     final palette = CallPalette.of(context);
     final style = callStyleOf(context);
+    final background = ref.watch(callBackgroundProvider);
 
-    // 다크 통화 화면 위에서는 상태바 아이콘이 밝아야 한다.
+    // 어두운 통화 화면 위에서는 상태바 아이콘이 밝아야 한다.
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -183,15 +185,9 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
         statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: palette.background.last,
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: palette.background,
-            ),
-          ),
+        backgroundColor: background.colors.last,
+        body: CallBackgroundView(
+          background: background,
           child: SafeArea(
             child: style == CallStyle.ios
                 ? _IosRingingStage(
@@ -257,8 +253,8 @@ class _IncomingCallScreenState extends ConsumerState<IncomingCallScreen>
   }
 }
 
-/// iOS 수신 화면 — 이름/회선 라벨을 위에 크게, 아래에 알림·메시지 보조 액션과
-/// 거절·응답 버튼.
+/// iOS 수신 화면 — 실제 아이폰 캡쳐 그대로: 아바타 없이 위쪽에 회선 라벨과
+/// 이름, 아래에 메시지 보내기·음성 사서함 보조 액션과 거절·응답 버튼.
 class _IosRingingStage extends StatelessWidget {
   const _IosRingingStage({
     required this.caller,
@@ -278,80 +274,67 @@ class _IosRingingStage extends StatelessWidget {
 
     return Column(
       children: [
-        const Spacer(flex: 2),
-        CallerAvatar(
-          name: name,
-          size: 104,
-          variant: CallerAvatarVariant.call,
-        ),
-        const SizedBox(height: 22),
-        Text(
-          name,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: palette.textPrimary,
-            fontSize: 38,
-            fontWeight: FontWeight.w400,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          '휴대전화',
-          style: TextStyle(color: palette.textSecondary, fontSize: 18),
-        ),
-        const Spacer(flex: 4),
+        const SizedBox(height: 60),
+        IosCallHeader(caption: '휴대전화', name: name, palette: palette),
+        const Spacer(),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 56),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _IosSecondaryAction(
-                icon: Icons.alarm,
-                label: '알림',
+                icon: Icons.chat_bubble,
+                label: '메시지 보내기',
                 palette: palette,
               ),
               _IosSecondaryAction(
-                icon: Icons.message,
-                label: '메시지',
+                icon: Icons.voicemail,
+                label: '음성 사서함',
                 palette: palette,
               ),
             ],
           ),
         ),
-        const SizedBox(height: 34),
+        const SizedBox(height: 38),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 40),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               CallActionButton(
                 icon: Icons.call_end,
                 color: palette.decline,
+                borderColor: const Color(0x80FF9A94),
                 label: '거절',
                 labelColor: palette.textPrimary,
+                labelFontSize: 17,
                 size: palette.actionButtonSize,
                 onTap: onReject,
               ),
               CallActionButton(
                 icon: Icons.call,
                 color: palette.accept,
+                borderColor: const Color(0x9988E08A),
                 label: '응답',
                 labelColor: palette.textPrimary,
+                labelFontSize: 17,
                 size: palette.actionButtonSize,
                 onTap: onAccept,
               ),
             ],
           ),
         ),
-        const SizedBox(height: 36),
+        const SizedBox(height: 38),
       ],
     );
   }
 }
 
-/// iOS 수신 화면의 작은 보조 액션(알림/메시지). 실제 전화 UI 에도 있는
-/// 버튼이라 연출상 필요하지만, 가짜 통화에서는 동작이 없다.
+/// iOS 수신 화면의 작은 보조 액션(메시지 보내기/음성 사서함). 실제 전화
+/// UI 에도 있는 버튼이라 연출상 필요하지만, 가짜 통화에서는 동작이 없다.
+///
+/// 라벨이 버튼보다 넓으므로 라벨 폭을 고정해, 아래 큰 버튼과 원의 중심이
+/// 세로로 맞도록 한다.
 class _IosSecondaryAction extends StatelessWidget {
   const _IosSecondaryAction({
     required this.icon,
@@ -365,28 +348,34 @@ class _IosSecondaryAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 56,
-          height: 56,
-          child: Material(
-            color: palette.controlIdle,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () {},
-              child: Icon(icon, color: Colors.white, size: 24),
+    return SizedBox(
+      width: 120,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: Material(
+              color: palette.controlIdle,
+              shape: CircleBorder(
+                side: BorderSide(color: palette.controlBorder, width: 1),
+              ),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () {},
+                child: Icon(icon, color: Colors.white, size: 20),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(color: palette.textPrimary, fontSize: 14),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            label,
+            maxLines: 1,
+            style: TextStyle(color: palette.textPrimary, fontSize: 15),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -492,4 +481,3 @@ class _AndroidRingingStage extends StatelessWidget {
     );
   }
 }
-

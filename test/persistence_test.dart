@@ -89,6 +89,23 @@ void main() {
     expect(find.text('진동만'), findsOneWidget);
   });
 
+  testWidgets('통화 화면 배경을 고르면 저장된다', (tester) async {
+    final prefs = await pumpAppWith(tester, {});
+
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await settle(tester);
+    // 기본값은 실제 아이폰 캡쳐의 보라 배경.
+    expect(find.text('보라'), findsOneWidget);
+
+    await tester.tap(find.text('통화 화면 배경'));
+    await settle(tester);
+    await tester.tap(find.text('파랑'));
+    await settle(tester);
+
+    expect(prefs.getString(PrefKeys.callBackground), 'blue');
+    expect(find.text('파랑'), findsOneWidget);
+  });
+
   testWidgets('마지막에 전화한 이름을 켤 때 이름칸에 채운다', (tester) async {
     await pumpAppWith(tester, {PrefKeys.lastCallerName: '김대리'});
 

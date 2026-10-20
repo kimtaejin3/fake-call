@@ -15,10 +15,17 @@ class CallActionButton extends StatelessWidget {
     required this.labelColor,
     required this.onTap,
     this.rotateIcon = false,
+    this.borderColor,
+    this.labelFontSize = 14,
   });
 
   final IconData icon;
   final Color color;
+
+  /// 원 가장자리 테두리. iOS 는 버튼 색보다 밝은 테두리를 얇게 두른다.
+  final Color? borderColor;
+
+  final double labelFontSize;
 
   /// 버튼 아래 캡션. 빈 문자열이면 라벨을 그리지 않는다.
   final String label;
@@ -41,7 +48,11 @@ class CallActionButton extends StatelessWidget {
           height: size,
           child: Material(
             color: color,
-            shape: const CircleBorder(),
+            shape: CircleBorder(
+              side: borderColor == null
+                  ? BorderSide.none
+                  : BorderSide(color: borderColor!, width: 1),
+            ),
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: onTap,
@@ -59,7 +70,7 @@ class CallActionButton extends StatelessWidget {
             label,
             style: TextStyle(
               color: labelColor,
-              fontSize: 14,
+              fontSize: labelFontSize,
               fontWeight: FontWeight.w400,
             ),
           ),
@@ -82,6 +93,8 @@ class CallControlButton extends StatelessWidget {
     required this.palette,
     required this.onTap,
     this.active = false,
+    this.dimmed = false,
+    this.labelFontSize = 13,
   });
 
   final IconData icon;
@@ -89,6 +102,12 @@ class CallControlButton extends StatelessWidget {
   final CallPalette palette;
   final VoidCallback onTap;
   final bool active;
+
+  /// 아이콘을 흐리게 그린다. 상대가 쓸 수 없는 기능(예: FaceTime)을 실제
+  /// 전화 UI 처럼 회색으로 보여줄 때 쓴다.
+  final bool dimmed;
+
+  final double labelFontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -102,14 +121,22 @@ class CallControlButton extends StatelessWidget {
           height: size,
           child: Material(
             color: active ? palette.controlActive : palette.controlIdle,
-            shape: const CircleBorder(),
+            shape: CircleBorder(
+              side: active || palette.controlBorder.a == 0
+                  ? BorderSide.none
+                  : BorderSide(color: palette.controlBorder, width: 1),
+            ),
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: onTap,
               child: Icon(
                 icon,
                 size: size * 0.4,
-                color: active ? palette.controlActiveIcon : Colors.white,
+                color: active
+                    ? palette.controlActiveIcon
+                    : dimmed
+                        ? Colors.white.withValues(alpha: 0.5)
+                        : Colors.white,
               ),
             ),
           ),
@@ -124,7 +151,7 @@ class CallControlButton extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: palette.textPrimary,
-              fontSize: 13,
+              fontSize: labelFontSize,
               fontWeight: FontWeight.w400,
             ),
           ),
